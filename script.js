@@ -1,110 +1,113 @@
-// script.js v7.0 - Added Excel Preview Support
+// script.js v8.1 - Finalized Auth Sync & Global Scoping
+let allFilesData = [];
+let currentFolderId = 'root';
+let folderHistory = [];
+
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Entry Page Logic (Now Form) ---
-    // Check if already registered (skip only if both steps done, actually let's re-think skip logic)
-    // Old logic: if docStore_collegeName exists, skip to store.
-    // New logic: we might want to check if both are done?
-    // For now, let's keep it simple: if collegeName exists, maybe we assume they did the form.
-    // But they might not have done the Yes/No.
-    // Let's rely on checking specific flags or just current page content.
 
-    const savedCollegeName = localStorage.getItem('docStore_collegeName');
+    // --- Firebase Bridge Initialization ---
+    // This ensures script.js only starts talking to Firebase once firebase-init.js (module) is ready.
+    function initFirebaseLogic() {
+        if (!window.fbOnAuthStateChanged) return;
 
-    // START CHANGE: Redirect Logic
-    // If we are on entry.html (which now has #college-name) and we have data, 
-    // maybe we want to go forward? 
-    // Actually, let's just let them re-fill if they are here, OR redirect if ALL done.
-    // For simplicity: If localStorage has EVERYTHING, go to store.
+        window.fbOnAuthStateChanged(async (user) => {
+            if (user) {
+                console.log("👤 User Logged In:", user.email);
 
-    if (savedCollegeName && localStorage.getItem('docStore_isCollegeLookErp')) {
-        if (window.location.pathname.endsWith('entry.html') || window.location.pathname.endsWith('details.html')) {
-            window.location.href = 'store.html';
-            return;
+                // If on entry page, check if profile exists
+                if (window.location.pathname.endsWith('entry.html') || window.location.pathname.endsWith('index.html')) {
+                    const settings = await window.fbLoadSettings();
+                    if (settings && settings.collegeName) {
+                        window.location.href = 'store.html';
+                    } else {
+                        // Profile incomplete, show details form
+                        const authSection = document.getElementById('auth-section');
+                        const detailsSection = document.getElementById('details-section');
+                        if (authSection) authSection.style.display = 'none';
+                        if (detailsSection) detailsSection.style.display = 'block';
+                    }
+                }
+
+                // Update UI in Store (if exists)
+                const userEmailDisp = document.getElementById('user-email-display');
+                if (userEmailDisp) userEmailDisp.textContent = user.email;
+
+                // Load data for store display
+                loadProfile();
+                loadFilesFromDB();
+                if (document.getElementById('feedback-list')) loadFeedback();
+                if (document.getElementById('ticket-list')) loadTickets();
+
+            } else {
+                console.log("👤 No user logged in.");
+                // Protected route protection: Redirect to entry
+                if (window.location.pathname.endsWith('store.html') ||
+                    window.location.pathname.endsWith('feedback.html') ||
+                    window.location.pathname.endsWith('support.html')) {
+                    window.location.href = 'entry.html';
+                }
+            }
+        });
+    }
+
+    // Bridge Wait Helper - Optimized for fast loading
+    function waitForBridge(retries = 0) {
+        if (window.fbOnAuthStateChanged && window.fbFetchFiles) {
+            console.log("✅ Firebase Bridge Ready");
+            initFirebaseLogic();
+        } else if (retries < 60) {
+            setTimeout(() => waitForBridge(retries + 1), 50);
+        } else {
+            console.error("❌ Firebase Bridge Timeout.");
         }
     }
-    // END CHANGE
 
-    const btnYes = document.getElementById('btn-yes');
-    const btnNo = document.getElementById('btn-no');
+    waitForBridge();
 
-    // Logic for Yes/No (Now on details.html)
-    if (btnYes) {
-        btnYes.addEventListener('click', async () => {
-            // Save "Yes" to backend
-            localStorage.setItem('docStore_isCollegeLookErp', 'Yes'); // Local backup
-            if (window.fbSaveSettings) {
-                try {
-                    btnYes.textContent = "Saving...";
-                    btnYes.disabled = true;
-                    await window.fbSaveSettings({ isCollegeLookErp: 'Yes' });
-                } catch (e) {
-                    console.error("Error saving Yes:", e);
-                }
+    // --- Auth UI Interaction (entry.html) ---
+    const authTitle = document.getElementById('auth-title');
+    const authBtn = document.getElementById('btn-auth-primary');
+    const authToggle = document.getElementById('auth-toggle-text');
+    const emailInput = document.getElementById('auth-email');
+    const passInput = document.getElementById('auth-password');
+    let isSignupMode = false;
+
+    if (authToggle) {
+        authToggle.addEventListener('click', () => {
+            isSignupMode = !isSignupMode;
+            if (isSignupMode) {
+                authTitle.textContent = "Sign Up";
+                authBtn.textContent = "Create Account";
+                authToggle.textContent = "Already have an account? Login";
+            } else {
+                authTitle.textContent = "Login";
+                authBtn.textContent = "Login";
+                authToggle.textContent = "Don't have an account? Sign Up";
             }
-            window.location.href = 'store.html'; // Go to Store (3rd Image)
         });
     }
 
-    if (btnNo) {
-        btnNo.addEventListener('click', async () => {
-            // Save "No" to backend
-            localStorage.setItem('docStore_isCollegeLookErp', 'No'); // Local backup
-            if (window.fbSaveSettings) {
-                try {
-                    btnNo.textContent = "Saving...";
-                    btnNo.disabled = true;
-                    await window.fbSaveSettings({ isCollegeLookErp: 'No' });
-                } catch (e) {
-                    console.error("Error saving No:", e);
-                }
+    if (authBtn) {
+        authBtn.addEventListener('click', async () => {
+            const email = emailInput.value;
+            const password = passInput.value;
+            if (!email || !password) { showModal("Please enter email and password."); return; }
+
+            try {
+                authBtn.disabled = true; authBtn.textContent = "Processing...";
+                if (isSignupMode) { await window.fbSignUp(email, password); showModal("Account created! Please complete your profile."); }
+                else { await window.fbSignIn(email, password); }
+            } catch (err) {
+                showModal("Auth Failed: " + err.message);
+                authBtn.disabled = false; authBtn.textContent = isSignupMode ? "Create Account" : "Login";
             }
-            window.location.href = 'store.html'; // Go to Store (3rd Image)
         });
     }
 
-    // --- Navigation Logic (Hash & Tabs) ---
-    function switchTab(tabId) {
-        // Remove active class from all buttons and sections
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
-
-        // Add active class to target
-        const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
-        const activeSection = document.getElementById(`${tabId}-section`); // Section IDs: give-feedback-section
-
-        // Note: Our IDs are slightly different: 'give-feedback-section' vs tab 'give-feedback'.
-        // My previous code expected them to utilize the same ID base.
-        // Let's ensure the IDs match the pattern: [tabId]-section
-
-        if (activeBtn) activeBtn.classList.add('active');
-        if (activeSection) activeSection.classList.add('active');
-    }
-
-    function updateActiveLink(id) {
-        document.querySelectorAll('.footer-links a').forEach(a => a.classList.remove('active-link'));
-        const link = document.getElementById(id);
-        if (link) link.classList.add('active-link');
-    }
-
-    // Handle Hash on Load
-    const hash = window.location.hash;
-    if (hash === '#review') {
-        switchTab('review-feedback');
-        updateActiveLink('link-reviews');
-    }
-
-    // Tab Click Listeners (Generic)
-    document.querySelectorAll('.tab-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const tab = button.getAttribute('data-tab');
-            switchTab(tab);
-        });
-    });
-
-    // --- Details Page Logic (Now on entry.html) ---
-    const btnNextDetails = document.getElementById('btn-next-details');
-    if (btnNextDetails) {
-        btnNextDetails.addEventListener('click', async () => {
+    // --- Profile Setup Logic ---
+    const btnSaveProfile = document.getElementById('btn-save-profile');
+    if (btnSaveProfile) {
+        btnSaveProfile.addEventListener('click', async () => {
             const collegeName = document.getElementById('college-name').value;
             const userName = document.getElementById('user-name').value;
             const userRole = document.getElementById('user-role').value;
@@ -112,47 +115,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const collegeAddress = document.getElementById('college-address').value;
             const erpName = document.getElementById('erp-name').value;
 
-            if (collegeName.trim() === '') {
-                showModal('Please enter the College Name.');
-                return;
+            if (!collegeName || !userName) { showModal("College Name and Your Name are required."); return; }
+
+            try {
+                btnSaveProfile.disabled = true; btnSaveProfile.textContent = "Saving...";
+                await window.fbSaveSettings({ collegeName, userName, userRole, courses, collegeAddress, erpName });
+                localStorage.setItem('docStore_collegeName', collegeName);
+                window.location.href = 'store.html';
+            } catch (err) {
+                showModal("Error saving profile: " + err.message);
+                btnSaveProfile.disabled = false; btnSaveProfile.textContent = "Finish Setup";
             }
-
-            localStorage.setItem('docStore_collegeName', collegeName);
-            localStorage.setItem('docStore_userName', userName);
-            localStorage.setItem('docStore_userRole', userRole);
-            localStorage.setItem('docStore_courses', courses);
-            localStorage.setItem('docStore_collegeAddress', collegeAddress);
-            localStorage.setItem('docStore_erpName', erpName);
-
-            // Save to Firebase (Wait for it!)
-            if (window.fbSaveSettings) {
-                try {
-                    // Show small indicator
-                    const btn = document.getElementById('btn-next-details');
-                    const originalText = btn.textContent;
-                    btn.textContent = "Saving...";
-                    btn.disabled = true;
-
-                    await window.fbSaveSettings({
-                        collegeName,
-                        userName,
-                        userRole,
-                        courses,
-                        collegeAddress,
-                        erpName
-                    });
-                } catch (err) {
-                    console.error("Error saving settings to cloud", err);
-                    alert("Error saving to cloud (check console). Proceeding locally.");
-                }
-            }
-
-            // Clear the next step's flag to prevent auto-redirect on details.html if re-doing the flow
-            localStorage.removeItem('docStore_isCollegeLookErp');
-
-            window.location.href = 'details.html'; // Redirect to Yes/No page
         });
     }
+
 
     // --- Store Page Logic ---
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -181,24 +157,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (storeSubHeader) storeSubHeader.textContent = subText;
         }
 
+
         // --- Header Actions ---
         const btnLogout = document.getElementById('btn-logout');
         const btnSettings = document.getElementById('btn-settings');
-
-        if (btnLogout) {
-            btnLogout.addEventListener('click', () => {
-                showConfirm("Are you sure you want to Logout?", () => {
-                    localStorage.removeItem('docStore_collegeName');
-                    localStorage.removeItem('docStore_userName');
-                    localStorage.removeItem('docStore_userRole');
-                    localStorage.removeItem('docStore_courses');
-                    localStorage.removeItem('docStore_collegeAddress');
-                    // Do NOT clear docStore_theme or documentStore_note necessarily, but typical logout wipes session.
-                    // Let's keep theme preference.
-                    window.location.href = 'entry.html';
-                });
-            });
-        }
 
         if (btnSettings) {
             btnSettings.addEventListener('click', () => {
@@ -462,11 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Firebase Integration ---
-    let allFilesData = [];
-    let currentFolderId = 'root';
-    let folderHistory = [];
-
+    // --- Firebase Integration State ---
     const btnCreateFolder = document.getElementById('btn-create-folder');
     const btnBack = document.getElementById('btn-back');
     const breadcrumbs = document.getElementById('breadcrumbs');
@@ -533,26 +491,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // ... existing code ...
     // ...
 
-    // Custom Modal Functions (Global Scope)
-    function showModal(message) {
+    // Custom Modal Functions - Exposed to Global Scope
+    window.showModal = function (message) {
         const modal = document.getElementById('custom-modal');
         const msg = document.getElementById('modal-message');
         const actions = document.getElementById('modal-actions');
         const input = document.getElementById('modal-input');
+        const select = document.getElementById('modal-select');
         const title = document.getElementById('modal-title');
 
         if (modal && msg && actions) {
             msg.textContent = message;
-            if (title) title.textContent = 'Notification'; // Reset title
-            if (input) input.style.display = 'none'; // Hide input
+            if (title) title.textContent = 'Notification';
+            if (input) input.style.display = 'none';
+            if (select) select.style.display = 'none';
 
-            // Reset to single OK button
             actions.innerHTML = '<button class="btn primary" onclick="closeModal()">OK</button>';
             modal.style.display = 'flex';
         } else {
             alert(message);
         }
-    }
+    };
 
     function showConfirm(message, onConfirm) {
         const modal = document.getElementById('custom-modal');
@@ -679,7 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (files.length === 0) {
-            fileListDisplay.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">' + (searchTerm ? 'No matching files found' : 'Folder is empty') + '</div>';
+            const emptyMsg = searchTerm ? 'No matching files found' : 'Folder is empty';
+            fileListDisplay.innerHTML = `<div style="text-align: center; color: #888; padding: 20px;">${emptyMsg}</div>`;
             return;
         }
 
@@ -712,16 +672,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load Files from Firebase
     async function loadFilesFromDB() {
+        const fileListDisplay = document.getElementById('file-list-display');
+        if (fileListDisplay) {
+            fileListDisplay.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;"><div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>Loading your files...</div>';
+        }
+
         try {
             if (window.fbFetchFiles) {
                 allFilesData = await window.fbFetchFiles();
+                console.log(`📁 Loaded ${allFilesData.length} items`);
                 renderFileList();
-            } else {
-                setTimeout(loadFilesFromDB, 500);
             }
         } catch (e) {
             console.error("Error loading files:", e);
-            showModal("Error loading files from Cloud: " + (e.message || e));
+            if (fileListDisplay) {
+                fileListDisplay.innerHTML = '<div style="text-align: center; padding: 40px; color: #d32f2f;">❌ Error loading files. Please refresh the page.</div>';
+            }
         }
     }
 
@@ -1293,121 +1259,112 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Initialize ---
-    if (document.getElementById('feedback-list')) setTimeout(loadFeedback, 1000);
-    if (document.getElementById('ticket-list')) setTimeout(loadTickets, 1000);
-});
+    // Note: Data loading (files, feedback, tickets) is triggered inside window.fbOnAuthStateChanged
+    // to ensure we have a valid user context and avoid redundant requests.
 
-// Save Note to Current Store
-function saveNoteToStore() {
-    processSaveNote('current');
-}
+    // Note Export Functions - Exposed to Global Scope
+    window.saveNoteToStore = function () {
+        processSaveNote('current');
+    };
 
-// Save Note to Specific Folder
-function saveNoteToFolder() {
-    // 1. Get List of Folders (Root + Subfolders)
-    // We need to access 'allFilesData' from the main scope. 
-    // Since this function is global and 'allFilesData' is inside DOMContentLoaded, 
-    // we need to dispatch an event or make 'allFilesData' accessible.
-    // However, 'showSelect' is available. 
-    // Let's dispatch a request to main scope to handle the UI part?
-    // EASIER: Just dispatch a 'request-save-folder' event, main scope handles the rest.
-    document.dispatchEvent(new CustomEvent('request-save-folder'));
-}
+    window.saveNoteToFolder = function () {
+        document.dispatchEvent(new CustomEvent('request-save-folder'));
+    };
 
-// Export Note to PDF
-async function saveNoteToPDF() {
-    const noteContent = document.getElementById('note-area').innerText;
-    if (!noteContent.trim()) {
-        showModal('Note is empty.');
-        return;
-    }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    const margin = 10;
-    const pageHeight = doc.internal.pageSize.height;
-    const pageWidth = doc.internal.pageSize.width;
-    const maxLineWidth = pageWidth - margin * 2;
-
-    const lines = doc.splitTextToSize(noteContent, maxLineWidth);
-
-    let y = 10;
-    lines.forEach(line => {
-        if (y > pageHeight - 10) {
-            doc.addPage();
-            y = 10;
+    // Export Note to PDF - Global
+    window.saveNoteToPDF = async function () {
+        const noteContent = document.getElementById('note-area').innerText;
+        if (!noteContent.trim()) {
+            window.showModal('Note is empty.');
+            return;
         }
-        doc.text(line, margin, y);
-        y += 10; // Line height
-    });
 
-    const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
-    doc.save(fileName);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
 
-    // Create Blob and Save to Store
-    const pdfBlob = doc.output('blob');
-    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        const margin = 10;
+        const pageHeight = doc.internal.pageSize.height;
+        const pageWidth = doc.internal.pageSize.width;
+        const maxLineWidth = pageWidth - margin * 2;
 
-    document.dispatchEvent(new CustomEvent('save-note-file', {
-        detail: { file: file, parentId: 'current' }
-    }));
+        const lines = doc.splitTextToSize(noteContent, maxLineWidth);
 
-    showModal('PDF Downloaded & Saved to Store!');
-}
+        let y = 10;
+        lines.forEach(line => {
+            if (y > pageHeight - 10) {
+                doc.addPage();
+                y = 10;
+            }
+            doc.text(line, margin, y);
+            y += 10;
+        });
 
-// Export Note to Word
-function saveNoteToWord() {
-    const noteContent = document.getElementById('note-area').innerText;
-    if (!noteContent.trim()) {
-        showModal('Note is empty.');
-        return;
-    }
+        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
+        doc.save(fileName);
 
-    const doc = new docx.Document({
-        sections: [{
-            properties: {},
-            children: [
-                new docx.Paragraph({
-                    children: [
-                        new docx.TextRun(noteContent),
-                    ],
-                }),
-            ],
-        }],
-    });
+        const pdfBlob = doc.output('blob');
+        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-    docx.Packer.toBlob(doc).then(blob => {
-        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.docx`;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        document.body.appendChild(a);
-        a.style = "display: none";
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        window.URL.revokeObjectURL(url);
-
-        // Save to Store
-        const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
         document.dispatchEvent(new CustomEvent('save-note-file', {
             detail: { file: file, parentId: 'current' }
         }));
 
-        showModal('Word Doc Downloaded & Saved to Store!');
-    });
-}
+        window.showModal('PDF Downloaded & Saved to Store!');
+    };
 
-// Export Note to Excel
-function saveNoteToExcel() {
-    const noteContent = document.getElementById('note-area').innerHTML;
-    if (!document.getElementById('note-area').innerText.trim()) {
-        showModal('Note is empty.');
-        return;
-    }
 
-    // Wrap content in a simplified HTML structure for Excel
-    const htmlContent = `
+    // Export Note to Word - Global
+    window.saveNoteToWord = function () {
+        const noteContent = document.getElementById('note-area').innerText;
+        if (!noteContent.trim()) {
+            window.showModal('Note is empty.');
+            return;
+        }
+
+        const doc = new docx.Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new docx.Paragraph({
+                        children: [
+                            new docx.TextRun(noteContent),
+                        ],
+                    }),
+                ],
+            }],
+        });
+
+        docx.Packer.toBlob(doc).then(blob => {
+            const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.docx`;
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            document.body.appendChild(a);
+            a.style = "display: none";
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            window.URL.revokeObjectURL(url);
+
+            const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            document.dispatchEvent(new CustomEvent('save-note-file', {
+                detail: { file: file, parentId: 'current' }
+            }));
+
+            window.showModal('Word Doc Downloaded & Saved to Store!');
+        });
+    };
+
+
+    // Export Note to Excel - Global
+    window.saveNoteToExcel = function () {
+        const noteContent = document.getElementById('note-area').innerHTML;
+        if (!document.getElementById('note-area').innerText.trim()) {
+            window.showModal('Note is empty.');
+            return;
+        }
+
+        const htmlContent = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
         <head>
             <!--[if gte mso 9]>
@@ -1432,230 +1389,230 @@ function saveNoteToExcel() {
         </html>
     `;
 
-    const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.xls`;
+        const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.xls`;
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-    // Save to Store
-    const file = new File([blob], fileName, { type: 'application/vnd.ms-excel' });
-    document.dispatchEvent(new CustomEvent('save-note-file', {
-        detail: { file: file, parentId: 'current' }
-    }));
+        const file = new File([blob], fileName, { type: 'application/vnd.ms-excel' });
+        document.dispatchEvent(new CustomEvent('save-note-file', {
+            detail: { file: file, parentId: 'current' }
+        }));
 
-    showModal('Excel File Downloaded & Saved to Store!');
-}
-
+        window.showModal('Excel File Downloaded & Saved to Store!');
+    };
 
 
-function processSaveNote(targetId) {
-    const noteContent = document.getElementById('note-area').innerHTML;
-    if (!document.getElementById('note-area').innerText.trim()) {
-        showModal('Note is empty.');
-        return;
-    }
 
-    const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}_${new Date().toLocaleTimeString().replace(/:/g, '-')}.html`;
-
-    // Create File Object with extra metadata
-    const file = new File([noteContent], fileName, { type: 'text/html' });
-    // Attach targetId property to the file object itself doesn't persist well across Events if standard File.
-    // Instead we pass a detail object.
-
-    document.dispatchEvent(new CustomEvent('save-note-file', {
-        detail: { file: file, parentId: targetId }
-    }));
-}
-
-// Custom Modal Functions (Global Scope)
-function showModal(message) {
-    const modal = document.getElementById('custom-modal');
-    const msg = document.getElementById('modal-message');
-    const actions = document.getElementById('modal-actions');
-    const input = document.getElementById('modal-input');
-    const select = document.getElementById('modal-select');
-    const title = document.getElementById('modal-title');
-
-    if (modal && msg && actions) {
-        msg.textContent = message;
-        if (title) title.textContent = 'Notification';
-        if (input) input.style.display = 'none';
-        if (select) select.style.display = 'none';
-
-        actions.innerHTML = '<button class="btn primary" onclick="closeModal()">OK</button>';
-        modal.style.display = 'flex';
-    } else {
-        alert(message);
-    }
-}
-
-function showConfirm(message, onConfirm) {
-    const modal = document.getElementById('custom-modal');
-    const msg = document.getElementById('modal-message');
-    const actions = document.getElementById('modal-actions');
-    const input = document.getElementById('modal-input');
-    const select = document.getElementById('modal-select');
-    const title = document.getElementById('modal-title');
-
-    if (modal && msg && actions) {
-        msg.textContent = message;
-        if (title) title.textContent = 'Confirm Action';
-        if (input) input.style.display = 'none';
-        if (select) select.style.display = 'none';
-
-        actions.innerHTML = '';
-
-        const btnYes = document.createElement('button');
-        btnYes.className = 'btn primary';
-        btnYes.textContent = 'Yes';
-        btnYes.onclick = () => {
-            onConfirm();
-            closeModal();
-        };
-
-        const btnCancel = document.createElement('button');
-        btnCancel.className = 'btn secondary';
-        btnCancel.textContent = 'Cancel';
-        btnCancel.onclick = closeModal;
-
-        actions.appendChild(btnYes);
-        actions.appendChild(btnCancel);
-
-        modal.style.display = 'flex';
-    } else {
-        if (confirm(message)) {
-            onConfirm();
+    function processSaveNote(targetId) {
+        const noteContent = document.getElementById('note-area').innerHTML;
+        if (!document.getElementById('note-area').innerText.trim()) {
+            showModal('Note is empty.');
+            return;
         }
+
+        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}_${new Date().toLocaleTimeString().replace(/:/g, '-')}.html`;
+
+        // Create File Object with extra metadata
+        const file = new File([noteContent], fileName, { type: 'text/html' });
+        // Attach targetId property to the file object itself doesn't persist well across Events if standard File.
+        // Instead we pass a detail object.
+
+        document.dispatchEvent(new CustomEvent('save-note-file', {
+            detail: { file: file, parentId: targetId }
+        }));
     }
-}
 
-function showPrompt(message, onConfirm) {
-    const modal = document.getElementById('custom-modal');
-    const msg = document.getElementById('modal-message');
-    const actions = document.getElementById('modal-actions');
-    const input = document.getElementById('modal-input');
-    const select = document.getElementById('modal-select');
-    const title = document.getElementById('modal-title');
+    // Custom Modal Functions (Global Scope)
+    function showModal(message) {
+        const modal = document.getElementById('custom-modal');
+        const msg = document.getElementById('modal-message');
+        const actions = document.getElementById('modal-actions');
+        const input = document.getElementById('modal-input');
+        const select = document.getElementById('modal-select');
+        const title = document.getElementById('modal-title');
 
-    if (modal && msg && actions && input) {
-        msg.textContent = message;
-        if (title) title.textContent = 'Input Required';
-        input.style.display = 'block';
-        if (select) select.style.display = 'none';
-        input.value = '';
-        input.focus();
+        if (modal && msg && actions) {
+            msg.textContent = message;
+            if (title) title.textContent = 'Notification';
+            if (input) input.style.display = 'none';
+            if (select) select.style.display = 'none';
 
-        actions.innerHTML = '';
-
-        const btnOk = document.createElement('button');
-        btnOk.className = 'btn primary';
-        btnOk.textContent = 'OK';
-        btnOk.onclick = () => {
-            onConfirm(input.value);
-            closeModal();
-        };
-
-        const btnCancel = document.createElement('button');
-        btnCancel.className = 'btn secondary';
-        btnCancel.textContent = 'Cancel';
-        btnCancel.onclick = closeModal;
-
-        actions.appendChild(btnOk);
-        actions.appendChild(btnCancel);
-
-        modal.style.display = 'flex';
-        setTimeout(() => input.focus(), 50);
-    } else {
-        const result = prompt(message);
-        if (result !== null) onConfirm(result);
-    }
-}
-
-function showSelect(message, options, onConfirm) {
-    const modal = document.getElementById('custom-modal');
-    const msg = document.getElementById('modal-message');
-    const actions = document.getElementById('modal-actions');
-    const input = document.getElementById('modal-input');
-    const select = document.getElementById('modal-select');
-    const title = document.getElementById('modal-title');
-
-    if (modal && msg && actions && select) {
-        msg.textContent = message;
-        if (title) title.textContent = 'Select Option';
-        if (input) input.style.display = 'none';
-        select.style.display = 'block';
-        select.innerHTML = '';
-
-        options.forEach(opt => {
-            const el = document.createElement('option');
-            el.value = opt.value;
-            el.textContent = opt.text;
-            select.appendChild(el);
-        });
-
-        actions.innerHTML = '';
-
-        const btnOk = document.createElement('button');
-        btnOk.className = 'btn primary';
-        btnOk.textContent = 'Move';
-        btnOk.onclick = () => {
-            onConfirm(select.value);
-            closeModal();
-        };
-
-        const btnCancel = document.createElement('button');
-        btnCancel.className = 'btn secondary';
-        btnCancel.textContent = 'Cancel';
-        btnCancel.onclick = closeModal;
-
-        actions.appendChild(btnOk);
-        actions.appendChild(btnCancel);
-
-        modal.style.display = 'flex';
-        setTimeout(() => select.focus(), 50);
-    }
-}
-
-function closeModal() {
-    const modal = document.getElementById('custom-modal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-// Preview Modal Logic
-window.closePreview = () => {
-    const previewModal = document.getElementById('preview-modal');
-    const previewContent = document.getElementById('preview-content');
-    if (previewModal) {
-        previewModal.style.display = 'none';
-        if (previewContent) previewContent.innerHTML = ''; // Clear to stop iframes/media
-        document.body.style.overflow = ''; // Restore scroll
-    }
-};
-
-function showPreviewModal(filename, content, isUrl = false) {
-    const previewModal = document.getElementById('preview-modal');
-    const previewContent = document.getElementById('preview-content');
-    const previewFilename = document.getElementById('preview-filename');
-
-    if (previewModal && previewContent && previewFilename) {
-        previewFilename.textContent = filename;
-        if (isUrl) {
-            previewContent.innerHTML = `<iframe src="${content}" style="width:100%; height:100%; border:none; background:white;"></iframe>`;
-            previewContent.classList.add('frame-mode');
+            actions.innerHTML = '<button class="btn primary" onclick="closeModal()">OK</button>';
+            modal.style.display = 'flex';
         } else {
-            previewContent.innerHTML = `<div class="page">${content}</div>`;
-            previewContent.classList.remove('frame-mode');
+            alert(message);
         }
-        previewModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Prevent main page scroll
     }
-}
+
+    function showConfirm(message, onConfirm) {
+        const modal = document.getElementById('custom-modal');
+        const msg = document.getElementById('modal-message');
+        const actions = document.getElementById('modal-actions');
+        const input = document.getElementById('modal-input');
+        const select = document.getElementById('modal-select');
+        const title = document.getElementById('modal-title');
+
+        if (modal && msg && actions) {
+            msg.textContent = message;
+            if (title) title.textContent = 'Confirm Action';
+            if (input) input.style.display = 'none';
+            if (select) select.style.display = 'none';
+
+            actions.innerHTML = '';
+
+            const btnYes = document.createElement('button');
+            btnYes.className = 'btn primary';
+            btnYes.textContent = 'Yes';
+            btnYes.onclick = () => {
+                onConfirm();
+                closeModal();
+            };
+
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'btn secondary';
+            btnCancel.textContent = 'Cancel';
+            btnCancel.onclick = closeModal;
+
+            actions.appendChild(btnYes);
+            actions.appendChild(btnCancel);
+
+            modal.style.display = 'flex';
+        } else {
+            if (confirm(message)) {
+                onConfirm();
+            }
+        }
+    }
+
+    function showPrompt(message, onConfirm) {
+        const modal = document.getElementById('custom-modal');
+        const msg = document.getElementById('modal-message');
+        const actions = document.getElementById('modal-actions');
+        const input = document.getElementById('modal-input');
+        const select = document.getElementById('modal-select');
+        const title = document.getElementById('modal-title');
+
+        if (modal && msg && actions && input) {
+            msg.textContent = message;
+            if (title) title.textContent = 'Input Required';
+            input.style.display = 'block';
+            if (select) select.style.display = 'none';
+            input.value = '';
+            input.focus();
+
+            actions.innerHTML = '';
+
+            const btnOk = document.createElement('button');
+            btnOk.className = 'btn primary';
+            btnOk.textContent = 'OK';
+            btnOk.onclick = () => {
+                onConfirm(input.value);
+                closeModal();
+            };
+
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'btn secondary';
+            btnCancel.textContent = 'Cancel';
+            btnCancel.onclick = closeModal;
+
+            actions.appendChild(btnOk);
+            actions.appendChild(btnCancel);
+
+            modal.style.display = 'flex';
+            setTimeout(() => input.focus(), 50);
+        } else {
+            const result = prompt(message);
+            if (result !== null) onConfirm(result);
+        }
+    }
+
+    function showSelect(message, options, onConfirm) {
+        const modal = document.getElementById('custom-modal');
+        const msg = document.getElementById('modal-message');
+        const actions = document.getElementById('modal-actions');
+        const input = document.getElementById('modal-input');
+        const select = document.getElementById('modal-select');
+        const title = document.getElementById('modal-title');
+
+        if (modal && msg && actions && select) {
+            msg.textContent = message;
+            if (title) title.textContent = 'Select Option';
+            if (input) input.style.display = 'none';
+            select.style.display = 'block';
+            select.innerHTML = '';
+
+            options.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt.value;
+                el.textContent = opt.text;
+                select.appendChild(el);
+            });
+
+            actions.innerHTML = '';
+
+            const btnOk = document.createElement('button');
+            btnOk.className = 'btn primary';
+            btnOk.textContent = 'Move';
+            btnOk.onclick = () => {
+                onConfirm(select.value);
+                closeModal();
+            };
+
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'btn secondary';
+            btnCancel.textContent = 'Cancel';
+            btnCancel.onclick = closeModal;
+
+            actions.appendChild(btnOk);
+            actions.appendChild(btnCancel);
+
+            modal.style.display = 'flex';
+            setTimeout(() => select.focus(), 50);
+        }
+    }
+
+    window.closeModal = function () {
+        const modal = document.getElementById('custom-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    // Preview Modal Logic
+    window.closePreview = () => {
+        const previewModal = document.getElementById('preview-modal');
+        const previewContent = document.getElementById('preview-content');
+        if (previewModal) {
+            previewModal.style.display = 'none';
+            if (previewContent) previewContent.innerHTML = ''; // Clear to stop iframes/media
+            document.body.style.overflow = ''; // Restore scroll
+        }
+    };
+
+    function showPreviewModal(filename, content, isUrl = false) {
+        const previewModal = document.getElementById('preview-modal');
+        const previewContent = document.getElementById('preview-content');
+        const previewFilename = document.getElementById('preview-filename');
+
+        if (previewModal && previewContent && previewFilename) {
+            previewFilename.textContent = filename;
+            if (isUrl) {
+                previewContent.innerHTML = `<iframe src="${content}" style="width:100%; height:100%; border:none; background:white;"></iframe>`;
+                previewContent.classList.add('frame-mode');
+            } else {
+                previewContent.innerHTML = `<div class="page">${content}</div>`;
+                previewContent.classList.remove('frame-mode');
+            }
+            previewModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Prevent main page scroll
+        }
+    }
+});

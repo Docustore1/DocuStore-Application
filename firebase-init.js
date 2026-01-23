@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebas
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
 import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
 // Configuration
 const firebaseConfig = {
@@ -19,17 +20,28 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 
-console.log("🔥 Firebase Initialized");
+console.log("🔥 Firebase Initialized with Auth");
 
 // --- Expose Services to Global Scope (Bridge) ---
 window.firebaseDB = db;
 window.firebaseStorage = storage;
+window.firebaseAuth = auth;
+
+// --- Auth Helper Functions ---
+window.fbSignUp = (email, password) => createUserWithEmailAndPassword(auth, email, password);
+window.fbSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
+window.fbSignOut = () => signOut(auth);
+window.fbOnAuthStateChanged = (callback) => onAuthStateChanged(auth, callback);
 
 // --- Helper Functions (Exposed) ---
 
-// 1. Upload File
+// 1. Upload File (Scoped to User)
 window.fbUploadFile = async (file, parentId) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Unauthorized: No user logged in.");
+
     try {
         // Enforce 5MB Limit
         if (file.size > 5 * 1024 * 1024) {
@@ -40,11 +52,7 @@ window.fbUploadFile = async (file, parentId) => {
         let storagePath = null;
         const timestamp = Date.now();
 
-        // SMART UPLOAD STRATEGY:
-        // If file is small (< 500KB), store as Data URI in Firestore directly.
-        // This BYPASSES CORS issues on localhost and makes it faster for small notes/images.
         if (file.size < 500 * 1024) {
-            console.log("ℹ️ Small file detected: Saving to Firestore as Data URI.");
             url = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
@@ -52,27 +60,21 @@ window.fbUploadFile = async (file, parentId) => {
                 reader.readAsDataURL(file);
             });
         } else {
-            // Larger files go to Storage
-            storagePath = `files/${timestamp}_${file.name}`;
-
-            // CHECK HOSTNAME: Warn about CORS if on localhost for large files
-            if ((window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')) {
-                console.warn("⚠️ Uploading large file on localhost. If this fails, it is due to CORS.");
-            }
-
+            storagePath = `users/${user.uid}/files/${timestamp}_${file.name}`;
             const storageRef = ref(storage, storagePath);
             const snapshot = await uploadBytes(storageRef, file);
             url = await getDownloadURL(snapshot.ref);
         }
 
-        // Save Metadata to Firestore
+        // Save Metadata to Firestore with userId
         const docRef = await addDoc(collection(db, "files"), {
+            userId: user.uid,
             name: file.name,
             type: file.type,
             size: file.size,
             url: url,
-            storagePath: storagePath, // Null for Data URI files
-            parentId: parentId || 'root', // root or folder ID
+            storagePath: storagePath,
+            parentId: parentId || 'root',
             isFolder: false,
             createdAt: new Date().toISOString()
         });
@@ -80,20 +82,18 @@ window.fbUploadFile = async (file, parentId) => {
         return { id: docRef.id, ...file, url };
     } catch (error) {
         console.error("Upload Error:", error);
-        // Clean up error message for user
-        if (error.code === 'storage/unauthorized') {
-            throw new Error("Storage Unauthorized. Check Firebase Rules.");
-        } else if (error.message.includes('network error') || error.code === 'storage/canceled') {
-            throw new Error("Network/CORS Error. (Data URI fallback used for small files, but this file was too big)");
-        }
         throw error;
     }
 };
 
-// 2. Create Folder
+// 2. Create Folder (Scoped to User)
 window.fbCreateFolder = async (folderName, parentId) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Unauthorized");
+
     try {
         const docRef = await addDoc(collection(db, "files"), {
+            userId: user.uid,
             name: folderName,
             isFolder: true,
             parentId: parentId || 'root',
@@ -106,17 +106,17 @@ window.fbCreateFolder = async (folderName, parentId) => {
     }
 };
 
-// 3. Fetch Files
+// 3. Fetch Files (Filtered by User)
 window.fbFetchFiles = async () => {
+    const user = auth.currentUser;
+    if (!user) return [];
+
     try {
-        // Query files where 'isTrashed' is not true (false or undefined)
-        // complex queries in firebase need index. easier to just fetch all and filter client side for small apps
-        // or simple where clause if possible. 
-        // Let's filter client side to avoid index creation issues for now, or use a simple where if index exists.
-        // Given previous context of "index error", let's be safe and filter client side or use basic queries.
-        // Actually, let's try a strict query but handle potential index requirements if they arise. 
-        // Safest for "quick fix": Fetch all, filter in JS. 
-        const q = query(collection(db, "files"), orderBy("createdAt", "desc"));
+        // Fetch only files belonging to THIS user
+        const q = query(
+            collection(db, "files"),
+            where("userId", "==", user.uid)
+        );
         const querySnapshot = await getDocs(q);
         const files = [];
         querySnapshot.forEach((doc) => {
@@ -125,7 +125,9 @@ window.fbFetchFiles = async () => {
                 files.push({ id: doc.id, ...data });
             }
         });
-        return files;
+
+        // Sort client-side by createdAt descending
+        return files.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } catch (e) {
         console.error("Fetch Error:", e);
         return [];
@@ -135,15 +137,11 @@ window.fbFetchFiles = async () => {
 // 4. Delete Item (Soft Delete)
 window.fbDeleteItem = async (id, isFolder, storagePath) => {
     try {
-        // Soft Delete: Just mark as trashed
         const docRef = doc(db, "files", id);
         await updateDoc(docRef, {
             isTrashed: true,
             trashedAt: new Date().toISOString()
         });
-
-        // We do NOT delete from storage in soft delete
-        console.log(`Soft deleted item ${id}`);
     } catch (e) {
         console.error("Delete Error:", e);
         throw e;
@@ -158,7 +156,6 @@ window.fbRenameItem = async (id, newName) => {
             name: newName
         });
     } catch (e) {
-        console.error("Rename Error:", e);
         throw e;
     }
 };
@@ -171,48 +168,73 @@ window.fbMoveFile = async (id, newParentId) => {
             parentId: newParentId
         });
     } catch (e) {
-        console.error("Move Error:", e);
         throw e;
     }
 };
 
-// 5. Submit Feedback
+// 5. Submit Feedback (Scoped to User)
 window.fbSubmitFeedback = async (data) => {
+    const user = auth.currentUser;
     await addDoc(collection(db, "feedback"), {
         ...data,
+        userId: user ? user.uid : 'anonymous',
         createdAt: new Date().toISOString()
     });
 };
 
-// 6. Submit Support Ticket
+// 6. Submit Support Ticket (Scoped to User)
 window.fbSubmitTicket = async (data) => {
+    const user = auth.currentUser;
     await addDoc(collection(db, "tickets"), {
         ...data,
+        userId: user ? user.uid : 'anonymous',
         createdAt: new Date().toISOString(),
         status: 'Open'
     });
 };
 
-// 7. Fetch Feedback
+// 7. Fetch Feedback (Only yours)
 window.fbFetchFeedback = async () => {
-    const q = query(collection(db, "feedback"), orderBy("createdAt", "desc"));
+    const user = auth.currentUser;
+    if (!user) return [];
+    const q = query(
+        collection(db, "feedback"),
+        where("userId", "==", user.uid)
+    );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const feedback = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return feedback.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
-// 8. Fetch Tickets
+// 8. Fetch Tickets (Only yours)
 window.fbFetchTickets = async () => {
-    const q = query(collection(db, "tickets"), orderBy("createdAt", "desc"));
+    const user = auth.currentUser;
+    if (!user) return [];
+    const q = query(
+        collection(db, "tickets"),
+        where("userId", "==", user.uid)
+    );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const tickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return tickets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
-// 9. Save Settings
+// 9. Save Settings (Scoped to User)
 window.fbSaveSettings = async (data) => {
-    console.log("Saving settings to Firestore:", data);
-    await setDoc(doc(db, "settings", "college_profile"), {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    await setDoc(doc(db, "users", user.uid), {
         ...data,
         updatedAt: new Date().toISOString()
     }, { merge: true });
-    console.log("Settings saved successfully.");
+};
+
+// 10. Load Settings
+window.fbLoadSettings = async () => {
+    const user = auth.currentUser;
+    if (!user) return null;
+    const docSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", user.uid)));
+    if (!docSnap.empty) return docSnap.docs[0].data();
+    return null;
 };
