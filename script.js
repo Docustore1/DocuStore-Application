@@ -1,4 +1,4 @@
-// script.js v4.0 - Full Screen In-App Preview Implementation
+// script.js v7.0 - Added Excel Preview Support
 document.addEventListener('DOMContentLoaded', () => {
     // --- Entry Page Logic (Now Form) ---
     // Check if already registered (skip only if both steps done, actually let's re-think skip logic)
@@ -892,10 +892,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Handling for non-browser-viewable files (docx)
+                // Handling for Word Documents
                 if (name.endsWith('.docx')) {
-                    showModal("Generating preview...");
-                    const processArrayBuffer = (arrayBuffer) => {
+                    showModal("Generating document preview...");
+                    const processWordBuffer = (arrayBuffer) => {
                         mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
                             .then(result => {
                                 closeModal();
@@ -915,14 +915,52 @@ document.addEventListener('DOMContentLoaded', () => {
                             for (let i = 0; i < binaryString.length; i++) {
                                 bytes[i] = binaryString.charCodeAt(i);
                             }
-                            processArrayBuffer(bytes.buffer);
+                            processWordBuffer(bytes.buffer);
                         } catch (e) {
                             showModal("Error parsing file data.");
                         }
                     } else {
                         fetch(fileUrl)
                             .then(response => response.arrayBuffer())
-                            .then(processArrayBuffer)
+                            .then(processWordBuffer)
+                            .catch(err => showModal("Error loading file."));
+                    }
+                    return;
+                }
+
+                // Handling for Excel Files
+                if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
+                    showModal("Generating Excel preview...");
+                    const processExcelBuffer = (arrayBuffer) => {
+                        try {
+                            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+                            const firstSheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[firstSheetName];
+                            const html = XLSX.utils.sheet_to_html(worksheet);
+                            closeModal();
+                            showPreviewModal(fileRecord.name, html, false);
+                        } catch (err) {
+                            console.error(err);
+                            showModal("Error rendering Excel file.");
+                        }
+                    };
+
+                    if (fileUrl.startsWith('data:')) {
+                        try {
+                            const base64 = fileUrl.split(',')[1];
+                            const binaryString = window.atob(base64);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let i = 0; i < binaryString.length; i++) {
+                                bytes[i] = binaryString.charCodeAt(i);
+                            }
+                            processExcelBuffer(bytes.buffer);
+                        } catch (e) {
+                            showModal("Error parsing file data.");
+                        }
+                    } else {
+                        fetch(fileUrl)
+                            .then(response => response.arrayBuffer())
+                            .then(processExcelBuffer)
                             .catch(err => showModal("Error loading file."));
                     }
                     return;
