@@ -1,3 +1,4 @@
+// script.js v4.0 - Full Screen In-App Preview Implementation
 document.addEventListener('DOMContentLoaded', () => {
     // --- Entry Page Logic (Now Form) ---
     // Check if already registered (skip only if both steps done, actually let's re-think skip logic)
