@@ -199,6 +199,19 @@
 
 
 
+    <!-- Document Preview Modal -->
+    <div id="preview-modal" class="preview-overlay" style="display: none;">
+        <div class="preview-container">
+            <header class="preview-header">
+                <span id="preview-filename">Document Preview</span>
+                <button onclick="closePreview()" class="btn-close-preview">✕</button>
+            </header>
+            <div id="preview-content" class="preview-body">
+                <div class="preview-loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="firebase-init.js"></script>
     <script src="script.js"></script>
 </body>

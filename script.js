@@ -893,55 +893,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const processArrayBuffer = (arrayBuffer) => {
                             mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
                                 .then(result => {
-                                    const htmlContent = `
-                                        <!DOCTYPE html>
-                                        <html>
-                                        <head>
-                                            <meta charset="UTF-8">
-                                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                            <title>${fileRecord.name} - Preview</title>
-                                            <style>
-                                                body {
-                                                    background-color: #f0f0f0;
-                                                    margin: 0;
-                                                    padding: 0;
-                                                    font-family: sans-serif;
-                                                    display: flex;
-                                                    flex-direction: column;
-                                                    align-items: center;
-                                                }
-                                                .page {
-                                                    background: white;
-                                                    width: 100%;
-                                                    max-width: 800px;
-                                                    min-height: 100vh;
-                                                    padding: 20px;
-                                                    box-sizing: border-box;
-                                                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                                                }
-                                                @media (min-width: 1024px) {
-                                                    .page {
-                                                        width: 210mm;
-                                                        min-height: 297mm;
-                                                        padding: 20mm;
-                                                        margin: 20px auto;
-                                                    }
-                                                }
-                                                p { line-height: 1.6; margin-bottom: 1em; }
-                                                img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
-                                                table { border-collapse: collapse; width: 100%; border: 1px solid #ccc; }
-                                                td, th { border: 1px solid #ccc; padding: 8px; }
-                                            </style>
-                                        </head>
-                                        <body>
-                                            <div class="page">${result.value}</div>
-                                        </body>
-                                        </html>
-                                    `;
-                                    const blob = new Blob([htmlContent], { type: 'text/html' });
-                                    const url = URL.createObjectURL(blob);
-                                    window.open(url, '_blank');
-                                    closeModal();
+                                    closeModal(); // Close "Generating..."
+                                    showPreviewModal(fileRecord.name, result.value);
                                 })
                                 .catch(err => {
                                     console.error(err);
@@ -1624,5 +1577,27 @@ function closeModal() {
     const modal = document.getElementById('custom-modal');
     if (modal) {
         modal.style.display = 'none';
+    }
+}
+
+// Preview Modal Logic
+window.closePreview = () => {
+    const previewModal = document.getElementById('preview-modal');
+    if (previewModal) {
+        previewModal.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scroll
+    }
+};
+
+function showPreviewModal(filename, htmlContent) {
+    const previewModal = document.getElementById('preview-modal');
+    const previewContent = document.getElementById('preview-content');
+    const previewFilename = document.getElementById('preview-filename');
+
+    if (previewModal && previewContent && previewFilename) {
+        previewFilename.textContent = filename;
+        previewContent.innerHTML = `<div class="page">${htmlContent}</div>`;
+        previewModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent main page scroll
     }
 }
