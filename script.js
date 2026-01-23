@@ -886,93 +886,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     name.endsWith('.gif') ||
                     name.endsWith('.webp');
 
-                if (!isViewable) {
-                    // Check for Word Document
-                    if (name.endsWith('.docx')) {
-                        showModal("Generating preview...");
-
-                        const processArrayBuffer = (arrayBuffer) => {
-                            mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
-                                .then(result => {
-                                    closeModal(); // Close "Generating..."
-                                    showPreviewModal(fileRecord.name, result.value);
-                                })
-                                .catch(err => {
-                                    console.error(err);
-                                    showModal("Error rendering document.");
-                                });
-                        };
-
-                        if (fileUrl.startsWith('data:')) {
-                            try {
-                                const base64 = fileUrl.split(',')[1];
-                                const binaryString = window.atob(base64);
-                                const bytes = new Uint8Array(binaryString.length);
-                                for (let i = 0; i < binaryString.length; i++) {
-                                    bytes[i] = binaryString.charCodeAt(i);
-                                }
-                                processArrayBuffer(bytes.buffer);
-                            } catch (e) {
-                                showModal("Error parsing file data.");
-                            }
-                        } else {
-                            fetch(fileUrl)
-                                .then(response => response.arrayBuffer())
-                                .then(processArrayBuffer)
-                                .catch(err => showModal("Error loading file."));
-                        }
-                        return;
-                    }
-
-                    // Force Download for other non-viewable files
-                    const a = document.createElement('a');
-                    a.href = fileUrl;
-                    a.download = fileRecord.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                // IMPROVEMENT: Universal In-App Preview for ALL viewable files
+                if (isViewable) {
+                    showPreviewModal(fileRecord.name, fileUrl, true);
                     return;
                 }
 
-                // IMPROVEMENT: Use In-App Modal for HTML Notes too
-                if (name.endsWith('.html')) {
+                // Handling for non-browser-viewable files (docx)
+                if (name.endsWith('.docx')) {
+                    showModal("Generating preview...");
+                    const processArrayBuffer = (arrayBuffer) => {
+                        mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
+                            .then(result => {
+                                closeModal();
+                                showPreviewModal(fileRecord.name, result.value, false);
+                            })
+                            .catch(err => {
+                                console.error(err);
+                                showModal("Error rendering document.");
+                            });
+                    };
+
                     if (fileUrl.startsWith('data:')) {
                         try {
                             const base64 = fileUrl.split(',')[1];
-                            const content = decodeURIComponent(escape(window.atob(base64)));
-                            showPreviewModal(fileRecord.name, content);
+                            const binaryString = window.atob(base64);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let i = 0; i < binaryString.length; i++) {
+                                bytes[i] = binaryString.charCodeAt(i);
+                            }
+                            processArrayBuffer(bytes.buffer);
                         } catch (e) {
-                            showModal("Error opening note.");
+                            showModal("Error parsing file data.");
                         }
                     } else {
                         fetch(fileUrl)
-                            .then(r => r.text())
-                            .then(content => showPreviewModal(fileRecord.name, content))
-                            .catch(err => showModal("Error loading note."));
+                            .then(response => response.arrayBuffer())
+                            .then(processArrayBuffer)
+                            .catch(err => showModal("Error loading file."));
                     }
                     return;
                 }
 
-                // Handle Data URIs (Blocked by modern browsers on top-level nav)
-                if (fileUrl.startsWith('data:')) {
-                    const win = window.open();
-                    win.document.write(
-                        '<!DOCTYPE html>' +
-                        '<html>' +
-                        '<head>' +
-                        '<meta charset="UTF-8">' +
-                        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
-                        '<title>' + (fileRecord.name || 'View File') + '</title></head>' +
-                        '<body style="margin:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:#333;">' +
-                        '<iframe src="' + fileUrl + '" style="width:100%;height:100%;border:none;"></iframe>' +
-                        '</body>' +
-                        '</html>'
-                    );
-                    win.document.close(); // Ensure it renders
-                } else {
-                    // Normal URL (Firebase Storage)
-                    window.open(fileUrl, '_blank');
-                }
+                // Force Download for everything else
+                const a = document.createElement('a');
+                a.href = fileUrl;
+                a.download = fileRecord.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             });
 
             item.querySelector('.download').addEventListener('click', () => {
@@ -1606,20 +1568,28 @@ function closeModal() {
 // Preview Modal Logic
 window.closePreview = () => {
     const previewModal = document.getElementById('preview-modal');
+    const previewContent = document.getElementById('preview-content');
     if (previewModal) {
         previewModal.style.display = 'none';
+        if (previewContent) previewContent.innerHTML = ''; // Clear to stop iframes/media
         document.body.style.overflow = ''; // Restore scroll
     }
 };
 
-function showPreviewModal(filename, htmlContent) {
+function showPreviewModal(filename, content, isUrl = false) {
     const previewModal = document.getElementById('preview-modal');
     const previewContent = document.getElementById('preview-content');
     const previewFilename = document.getElementById('preview-filename');
 
     if (previewModal && previewContent && previewFilename) {
         previewFilename.textContent = filename;
-        previewContent.innerHTML = `<div class="page">${htmlContent}</div>`;
+        if (isUrl) {
+            previewContent.innerHTML = `<iframe src="${content}" style="width:100%; height:100%; border:none; background:white;"></iframe>`;
+            previewContent.classList.add('frame-mode');
+        } else {
+            previewContent.innerHTML = `<div class="page">${content}</div>`;
+            previewContent.classList.remove('frame-mode');
+        }
         previewModal.style.display = 'flex';
         document.body.style.overflow = 'hidden'; // Prevent main page scroll
     }

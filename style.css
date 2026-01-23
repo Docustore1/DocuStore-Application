@@ -1099,6 +1099,12 @@ body.dark-mode .folder-icon-svg {
     font-size: 1.2rem;
 }
 
+.preview-body.frame-mode {
+    padding: 0;
+    overflow: hidden;
+    background: #333;
+}
+
 .preview-body p {
     line-height: 1.6;
     margin-bottom: 1.2em;
