@@ -26,18 +26,19 @@
                 <img src="logo.png" alt="Logo" class="store-logo">
                 <div class="header-text">
                     <h2 id="college-name-display">College Name</h2>
-                    <p id="store-sub-header" style="color: #666; font-size: 0.9rem;">Document Store ERP | Welcome, User
+                    <p id="store-sub-header">Document Store ERP | Welcome, User
                     </p>
                 </div>
             </div>
 
             <div class="header-right" style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                <div class="top-links" style="font-size: 0.85rem; font-weight: 600; color: #555;">
+                <div class="top-links" style="font-size: 0.85rem; font-weight: 600;">
                     <a href="feedback.html"
                         style="text-decoration: none; color: inherit; margin-right: 15px;">Feedback</a>
                     <a href="support.html" style="text-decoration: none; color: inherit;">Support</a>
                 </div>
                 <div class="header-actions" style="margin-top: 5px;">
+                    <button id="btn-theme-toggle" class="icon-btn" title="Toggle Dark Mode">🌙</button>
                     <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
                     <button id="btn-logout" class="icon-btn" title="Logout">↪️</button>
                 </div>
@@ -51,16 +52,19 @@
 
         <!-- Write Section (Default Active) -->
         <div id="write-section" class="content-section active">
-            <div style="padding: 1rem 0; color: #666;">
-                <h3 style="margin: 0; font-size: 1.1rem; color: #333;">Your Notes</h3>
+            <div style="padding: 1rem 0;">
+                <h3 style="margin: 0; font-size: 1.1rem;">Your Notes</h3>
                 <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Write anything here. Auto-saved.</p>
             </div>
 
             <div class="rich-text-toolbar">
                 <!-- Toolbar items matches previous but ensuring yellow highlights -->
-                <button class="btn-toolbar" onclick="formatText('bold')" title="Bold"><b>B</b></button>
-                <button class="btn-toolbar" onclick="formatText('italic')" title="Italic"><i>I</i></button>
-                <button class="btn-toolbar" onclick="formatText('underline')" title="Underline"><u>U</u></button>
+                <button class="btn-toolbar" onclick="formatText('bold')" title="Bold"
+                    style="font-weight: bold;">B</button>
+                <button class="btn-toolbar" onclick="formatText('italic')" title="Italic"
+                    style="font-style: italic;">I</button>
+                <button class="btn-toolbar" onclick="formatText('underline')" title="Underline"
+                    style="text-decoration: underline;">U</button>
                 <div style="width: 1px; height: 20px; background: #ccc; margin: 0 10px;"></div>
                 <button class="btn-toolbar" onclick="formatText('insertUnorderedList')" title="Bullet List">•</button>
                 <button class="btn-toolbar" onclick="formatText('insertOrderedList')" title="Numbered List">1.</button>
@@ -123,9 +127,7 @@
                     onclick="saveNoteToExcel()">📊 Excel</button>
                 <button class="btn secondary" style="font-size: 0.85rem; padding: 8px 15px;"
                     onclick="saveNoteToStore()">💾 Save into Store</button>
-                <button class="btn secondary"
-                    style="font-size: 0.85rem; padding: 8px 15px; background: #fff8e1; border-color: #ffd700;"
-                    onclick="saveNoteToFolder()">📂 Save
+                <button class="btn secondary btn-folder-yellow" onclick="saveNoteToFolder()">📂 Save
                     to Folder...</button>
             </div>
         </div>

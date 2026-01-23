@@ -401,6 +401,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+
+        // Initial Toolbar State Check
+        setTimeout(updateToolbarState, 500);
     }
 
     // --- Dark Mode Logic ---
@@ -930,39 +933,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Handling for Excel Files
                 if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
+                    // Check if library is loaded
+                    if (typeof XLSX === 'undefined') {
+                        showModal("Excel helper library not loaded. Please check your internet connection and refresh.");
+                        return;
+                    }
+
                     showModal("Generating Excel preview...");
+
                     const processExcelBuffer = (arrayBuffer) => {
                         try {
-                            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-                            const firstSheetName = workbook.SheetNames[0];
-                            const worksheet = workbook.Sheets[firstSheetName];
-                            const html = XLSX.utils.sheet_to_html(worksheet);
-                            closeModal();
-                            showPreviewModal(fileRecord.name, html, false);
+                            const data = new Uint8Array(arrayBuffer);
+                            const workbook = XLSX.read(data, { type: 'array' });
+
+                            // Check if workbook has any sheets
+                            if (workbook.SheetNames && workbook.SheetNames.length > 0) {
+                                const firstSheetName = workbook.SheetNames[0];
+                                const worksheet = workbook.Sheets[firstSheetName];
+                                const html = XLSX.utils.sheet_to_html(worksheet);
+                                closeModal();
+                                showPreviewModal(fileRecord.name, html, false);
+                            } else {
+                                // Fallback for HTML-disguised XLS files (created by our export)
+                                const decoder = new TextDecoder();
+                                const text = decoder.decode(data);
+                                if (text.includes('<html') || text.includes('<body')) {
+                                    closeModal();
+                                    showPreviewModal(fileRecord.name, text, false);
+                                } else {
+                                    throw new Error("The file exists but contains no spreadsheet data.");
+                                }
+                            }
                         } catch (err) {
-                            console.error(err);
-                            showModal("Error rendering Excel file.");
+                            console.error("Excel Parsing Error:", err);
+                            // Secondary fallback: try reading as raw text if parsing fails
+                            try {
+                                const text = new TextDecoder().decode(arrayBuffer);
+                                if (text.includes('<html') || text.includes('<body')) {
+                                    closeModal();
+                                    showPreviewModal(fileRecord.name, text, false);
+                                    return;
+                                }
+                            } catch (e) { }
+                            showModal("Error rendering Excel file: " + (err.message || "Unknown error"));
                         }
                     };
 
-                    if (fileUrl.startsWith('data:')) {
-                        try {
-                            const base64 = fileUrl.split(',')[1];
-                            const binaryString = window.atob(base64);
-                            const bytes = new Uint8Array(binaryString.length);
-                            for (let i = 0; i < binaryString.length; i++) {
-                                bytes[i] = binaryString.charCodeAt(i);
-                            }
-                            processExcelBuffer(bytes.buffer);
-                        } catch (e) {
-                            showModal("Error parsing file data.");
-                        }
-                    } else {
-                        fetch(fileUrl)
-                            .then(response => response.arrayBuffer())
-                            .then(processExcelBuffer)
-                            .catch(err => showModal("Error loading file."));
-                    }
+                    // Use fetch for both data URIs and URLs - it's cleaner and more robust
+                    fetch(fileUrl)
+                        .then(response => {
+                            if (!response.ok) throw new Error("Could not fetch file content.");
+                            return response.arrayBuffer();
+                        })
+                        .then(processExcelBuffer)
+                        .catch(err => {
+                            console.error("Fetch Error:", err);
+                            showModal("Error loading file: " + err.message);
+                        });
                     return;
                 }
 

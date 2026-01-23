@@ -107,14 +107,14 @@ body {
 
 /* Store Page Styles */
 .store-container {
-    background: rgba(255, 255, 255, 0.95);
-    width: 95%;
-    max-width: 1200px;
-    margin: 2rem auto;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 1);
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
     overflow: hidden;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    min-height: 80vh;
+    box-shadow: none;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
@@ -211,16 +211,19 @@ body {
 .content-section {
     display: none;
     animation: fadeIn 0.3s ease-in-out;
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 1.5rem 2rem 2rem 2rem;
 }
 
 .content-section.active {
-    display: block;
+    display: flex;
 }
 
 /* Write Section */
 .rich-text-area {
     width: 100%;
-    height: 300px;
+    flex-grow: 1;
     padding: 1rem;
     border: 1px solid #ccc;
     border-radius: 0 0 8px 8px;
@@ -231,6 +234,7 @@ body {
     overflow-y: auto;
     background: #fff;
     outline: none;
+    min-height: 300px;
 }
 
 .rich-text-area:focus {
@@ -252,17 +256,25 @@ body {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 6px 12px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
     cursor: pointer;
-    font-size: 1rem;
-    min-width: 32px;
+    font-size: 1.1rem;
     font-weight: normal;
-    /* Ensure text isn't bold by default */
-    font-family: 'Times New Roman', serif;
-    /* Use serif for clear formatting icons */
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-folder-yellow {
+    background: #fff8e1;
+    border-color: #ffd700;
+    color: #333;
+    font-size: 0.85rem;
+    padding: 8px 15px;
 }
 
 .btn-toolbar:hover,
@@ -595,14 +607,15 @@ textarea.input-field {
 /* Footer/Top Links */
 .footer-links {
     position: absolute;
-    top: 2rem;
+    top: 1.5rem;
     left: 0;
     width: 100%;
     display: flex;
     justify-content: center;
-    gap: 3rem;
-    font-size: 0.9rem;
+    gap: 1.5rem;
+    font-size: 0.95rem;
     z-index: 10;
+    align-items: center;
 }
 
 .footer-links a {
@@ -613,14 +626,18 @@ textarea.input-field {
 }
 
 .footer-links a:hover {
-    color: var(--primary-orange);
-    text-decoration: underline;
+    color: #fff;
+    text-decoration: none;
 }
 
 /* Active Link Style */
 .footer-links a.active-link {
-    color: var(--primary-orange);
-    text-decoration: underline;
+    color: #000;
+    background: #fff;
+    padding: 5px 15px;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
 }
 
 /* Star Rating Styles */
@@ -703,13 +720,40 @@ body.dark-mode {
 
 body.dark-mode .store-container,
 body.dark-mode .entry-container {
-    background: rgba(30, 30, 30, 0.95);
+    background: #1e1e1e;
     color: #f0f0f0;
 }
 
 body.dark-mode .store-header {
     background-color: #252525;
-    border-bottom-color: #444;
+    border-bottom-color: #333;
+    color: #fff;
+}
+
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3 {
+    color: #ffffff !important;
+}
+
+body.dark-mode p,
+body.dark-mode label,
+body.dark-mode span {
+    color: #cccccc !important;
+}
+
+body.dark-mode .top-links,
+body.dark-mode .top-links a {
+    color: #dddddd !important;
+}
+
+body.dark-mode .footer-links a {
+    color: #fff;
+}
+
+body.dark-mode .footer-links a.active-link {
+    background-color: #444;
+    color: var(--primary-yellow);
 }
 
 body.dark-mode .tab-btn {
@@ -723,11 +767,34 @@ body.dark-mode .tab-btn.active {
 }
 
 body.dark-mode textarea#note-area,
+body.dark-mode .rich-text-area,
 body.dark-mode .input-field {
-    background-color: #333;
+    background-color: #2a2a2a;
     color: #fff;
-    border-color: #555;
+    border-color: #444;
     outline: none;
+}
+
+body.dark-mode .rich-text-toolbar {
+    background-color: #333;
+    border-color: #444;
+}
+
+body.dark-mode .btn-toolbar {
+    background-color: #333;
+    border-color: #444;
+    color: #eee;
+}
+
+body.dark-mode .btn-toolbar:hover {
+    background-color: #444;
+    color: #fff;
+}
+
+body.dark-mode .btn-toolbar.active {
+    background-color: var(--primary-yellow);
+    color: #000;
+    border-color: var(--primary-orange);
 }
 
 body.dark-mode .drop-zone {
@@ -767,6 +834,19 @@ body.dark-mode .btn.secondary {
     background-color: #444;
     color: #eee;
     border-color: #666;
+}
+
+/* Fix for the yellow "Save to Folder" button in dark mode */
+body.dark-mode .btn-folder-yellow {
+    background-color: var(--primary-yellow) !important;
+    color: #000 !important;
+    border-color: var(--primary-orange) !important;
+}
+
+body.dark-mode .btn.secondary[style*="background: #fff8e1"],
+body.dark-mode .btn.secondary[style*="background:#fff8e1"] {
+    display: none;
+    /* Removed as we use the class now */
 }
 
 
@@ -1077,6 +1157,32 @@ body.dark-mode .folder-icon-svg {
     box-sizing: border-box;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     overflow-wrap: break-word;
+    color: #333;
+}
+
+/* Dark Mode Preview */
+body.dark-mode .preview-overlay {
+    background-color: #1a1a1a;
+}
+
+body.dark-mode .preview-header {
+    background-color: #252525;
+    border-bottom-color: #333;
+}
+
+body.dark-mode #preview-filename {
+    color: #eee;
+}
+
+body.dark-mode .btn-close-preview {
+    background: #444;
+    color: #fff;
+}
+
+body.dark-mode .preview-body .page {
+    background-color: #2a2a2a;
+    color: #eee;
+    box-shadow: none;
 }
 
 @media (min-width: 768px) {
