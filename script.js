@@ -907,13 +907,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }
                                     .page {
                                         background: white;
-                                        width: 210mm; /* A4 width */
+                                        width: 100%; /* Full width on mobile */
+                                        max-width: 210mm; /* A4 width on desktop */
                                         min-height: 297mm; /* A4 height */
-                                        padding: 20mm;
-                                        margin: 20px auto;
+                                        padding: 10mm; /* Reduced padding for mobile */
+                                        margin: 10px auto;
                                         box-shadow: 0 0 10px rgba(0,0,0,0.5);
                                         box-sizing: border-box;
                                         overflow: hidden; /* Prevent spillover */
+                                    }
+                                    @media (min-width: 210mm) {
+                                        .page {
+                                            padding: 20mm; /* Standard A4 padding for desktop */
+                                        }
                                     }
                                     p { line-height: 1.5; margin-bottom: 1em; }
                                     img { max-width: 100%; height: auto; }
