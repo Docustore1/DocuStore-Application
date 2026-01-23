@@ -895,31 +895,38 @@ document.addEventListener('DOMContentLoaded', () => {
                             <html>
                             <head>
                                 <meta charset="UTF-8">
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                                 <title>${fileRecord.name} - Preview</title>
                                 <style>
-                                    body {
-                                        background-color: #525659; /* PDF viewer background color */
+                                    /* v2.1 Responsive Fix */
+                                    html, body {
+                                        width: 100%;
+                                        height: 100%;
                                         margin: 0;
                                         padding: 0;
+                                        background-color: #525659;
+                                        overflow-x: hidden;
+                                    }
+                                    body {
                                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                                         display: flex;
                                         flex-direction: column;
                                         align-items: center;
-                                        min-height: 100vh;
                                     }
                                     #container {
                                         width: 100%;
+                                        max-width: 100vw;
                                         display: flex;
                                         flex-direction: column;
                                         align-items: center;
+                                        padding-bottom: 40px;
                                     }
                                     .page {
                                         background: white;
-                                        width: 95%;
-                                        max-width: 210mm; /* A4 width */
-                                        min-height: 297mm; /* A4 height */
-                                        padding: 10mm;
+                                        width: 95vw; /* Use viewport width for true responsiveness */
+                                        max-width: 210mm; /* Limit to A4 on larger screens */
+                                        min-height: 297mm;
+                                        padding: 5vw; /* Proportional padding */
                                         margin: 20px auto;
                                         box-shadow: 0 0 10px rgba(0,0,0,0.5);
                                         box-sizing: border-box;
@@ -927,13 +934,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }
                                     @media (min-width: 210mm) {
                                         .page {
+                                            width: 210mm;
                                             padding: 20mm;
+                                            margin: 40px auto;
                                         }
                                     }
-                                    p { line-height: 1.5; margin-bottom: 1em; }
-                                    img { max-width: 100%; height: auto; }
-                                    table { border-collapse: collapse; width: 100%; border: 1px solid #ccc; }
-                                    td, th { border: 1px solid #ccc; padding: 5px; }
+                                    p { line-height: 1.6; margin-bottom: 1.2em; font-size: 16px; }
+                                    img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+                                    table { border-collapse: collapse; width: 100%; border: 1px solid #ccc; margin: 15px 0; }
+                                    td, th { border: 1px solid #ccc; padding: 8px; }
                                     .loading {
                                         color: white;
                                         text-align: center;
