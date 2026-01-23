@@ -934,15 +934,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // IMPROVEMENT: Use In-App Modal for HTML Notes too
+                if (name.endsWith('.html')) {
+                    if (fileUrl.startsWith('data:')) {
+                        try {
+                            const base64 = fileUrl.split(',')[1];
+                            const content = decodeURIComponent(escape(window.atob(base64)));
+                            showPreviewModal(fileRecord.name, content);
+                        } catch (e) {
+                            showModal("Error opening note.");
+                        }
+                    } else {
+                        fetch(fileUrl)
+                            .then(r => r.text())
+                            .then(content => showPreviewModal(fileRecord.name, content))
+                            .catch(err => showModal("Error loading note."));
+                    }
+                    return;
+                }
+
                 // Handle Data URIs (Blocked by modern browsers on top-level nav)
                 if (fileUrl.startsWith('data:')) {
                     const win = window.open();
                     win.document.write(
                         '<!DOCTYPE html>' +
                         '<html>' +
-                        '<head><title>' + (fileRecord.name || 'View File') + '</title></head>' +
-                        '<body style="margin:0;height:100vh;display:flex;justify-content:center;align-items:center;background:#f0f0f0;">' +
-                        '<iframe src="' + fileUrl + '" style="width:100%;height:100vh;border:none;"></iframe>' +
+                        '<head>' +
+                        '<meta charset="UTF-8">' +
+                        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+                        '<title>' + (fileRecord.name || 'View File') + '</title></head>' +
+                        '<body style="margin:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:#333;">' +
+                        '<iframe src="' + fileUrl + '" style="width:100%;height:100%;border:none;"></iframe>' +
                         '</body>' +
                         '</html>'
                     );
