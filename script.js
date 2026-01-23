@@ -888,118 +888,84 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!isViewable) {
                     // Check for Word Document
                     if (name.endsWith('.docx')) {
-                        // Open new window for "PDF-like" experience
-                        const previewWindow = window.open('', '_blank');
-                        previewWindow.document.write(`
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <meta charset="UTF-8">
-                                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                                <title>${fileRecord.name} - Preview</title>
-                                <style>
-                                    /* v2.1 Responsive Fix */
-                                    html, body {
-                                        width: 100%;
-                                        height: 100%;
-                                        margin: 0;
-                                        padding: 0;
-                                        background-color: #525659;
-                                        overflow-x: hidden;
-                                    }
-                                    body {
-                                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                                        display: flex;
-                                        flex-direction: column;
-                                        align-items: center;
-                                    }
-                                    #container {
-                                        width: 100%;
-                                        max-width: 100vw;
-                                        display: flex;
-                                        flex-direction: column;
-                                        align-items: center;
-                                        padding-bottom: 40px;
-                                    }
-                                    .page {
-                                        background: white;
-                                        width: 95vw; /* Use viewport width for true responsiveness */
-                                        max-width: 210mm; /* Limit to A4 on larger screens */
-                                        min-height: 297mm;
-                                        padding: 5vw; /* Proportional padding */
-                                        margin: 20px auto;
-                                        box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                                        box-sizing: border-box;
-                                        overflow-wrap: break-word;
-                                    }
-                                    @media (min-width: 210mm) {
-                                        .page {
-                                            width: 210mm;
-                                            padding: 20mm;
-                                            margin: 40px auto;
-                                        }
-                                    }
-                                    p { line-height: 1.6; margin-bottom: 1.2em; font-size: 16px; }
-                                    img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
-                                    table { border-collapse: collapse; width: 100%; border: 1px solid #ccc; margin: 15px 0; }
-                                    td, th { border: 1px solid #ccc; padding: 8px; }
-                                    .loading {
-                                        color: white;
-                                        text-align: center;
-                                        margin-top: 50px;
-                                        font-size: 1.2rem;
-                                    }
-                                </style>
-                            </head>
-                            <body>
-                                <div id="container">
-                                    <div class="loading">Loading document preview...</div>
-                                </div>
-                            </body>
-                            </html>
-                        `);
-                        previewWindow.document.close();
+                        showModal("Generating preview...");
 
-                        // Helper to process ArrayBuffer
                         const processArrayBuffer = (arrayBuffer) => {
                             mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
                                 .then(result => {
-                                    const container = previewWindow.document.getElementById('container');
-                                    // Wrap content in a "page" div
-                                    container.innerHTML = `<div class="page">${result.value}</div>`;
-
-                                    if (result.messages.length > 0) {
-                                        console.log("Mammoth messages:", result.messages);
-                                    }
+                                    const htmlContent = `
+                                        <!DOCTYPE html>
+                                        <html>
+                                        <head>
+                                            <meta charset="UTF-8">
+                                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                            <title>${fileRecord.name} - Preview</title>
+                                            <style>
+                                                body {
+                                                    background-color: #f0f0f0;
+                                                    margin: 0;
+                                                    padding: 0;
+                                                    font-family: sans-serif;
+                                                    display: flex;
+                                                    flex-direction: column;
+                                                    align-items: center;
+                                                }
+                                                .page {
+                                                    background: white;
+                                                    width: 100%;
+                                                    max-width: 800px;
+                                                    min-height: 100vh;
+                                                    padding: 20px;
+                                                    box-sizing: border-box;
+                                                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                                                }
+                                                @media (min-width: 1024px) {
+                                                    .page {
+                                                        width: 210mm;
+                                                        min-height: 297mm;
+                                                        padding: 20mm;
+                                                        margin: 20px auto;
+                                                    }
+                                                }
+                                                p { line-height: 1.6; margin-bottom: 1em; }
+                                                img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+                                                table { border-collapse: collapse; width: 100%; border: 1px solid #ccc; }
+                                                td, th { border: 1px solid #ccc; padding: 8px; }
+                                            </style>
+                                        </head>
+                                        <body>
+                                            <div class="page">${result.value}</div>
+                                        </body>
+                                        </html>
+                                    `;
+                                    const blob = new Blob([htmlContent], { type: 'text/html' });
+                                    const url = URL.createObjectURL(blob);
+                                    window.open(url, '_blank');
+                                    closeModal();
                                 })
                                 .catch(err => {
                                     console.error(err);
-                                    previewWindow.document.body.innerHTML = '<p style="color:white; text-align:center; margin-top:50px;">Error rendering document.</p>';
+                                    showModal("Error rendering document.");
                                 });
                         };
 
                         if (fileUrl.startsWith('data:')) {
-                            // Convert Base64 Data URI
                             try {
                                 const base64 = fileUrl.split(',')[1];
                                 const binaryString = window.atob(base64);
-                                const len = binaryString.length;
-                                const bytes = new Uint8Array(len);
-                                for (let i = 0; i < len; i++) {
+                                const bytes = new Uint8Array(binaryString.length);
+                                for (let i = 0; i < binaryString.length; i++) {
                                     bytes[i] = binaryString.charCodeAt(i);
                                 }
                                 processArrayBuffer(bytes.buffer);
                             } catch (e) {
-                                previewWindow.document.body.innerHTML = '<p style="color:white;">Error parsing file data.</p>';
+                                showModal("Error parsing file data.");
                             }
                         } else {
-                            // Fetch URL
                             fetch(fileUrl)
                                 .then(response => response.arrayBuffer())
                                 .then(processArrayBuffer)
-                                .catch(err => {
-                                    previewWindow.document.body.innerHTML = '<p style="color:white;">Error loading file.</p>';
-                                });
+                                .catch(err => showModal("Error loading file."));
                         }
                         return;
                     }
