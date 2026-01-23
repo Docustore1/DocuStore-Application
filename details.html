@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Document Store</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body class="entry-body">
+    <div class="entry-container">
+        <img src="logo.png" alt="Logo" class="app-logo">
+        <h1>Is college look erp?</h1>
+        <div class="button-group">
+            <button id="btn-yes" class="btn primary">Yes</button>
+            <button id="btn-no" class="btn secondary">No</button>
+        </div>
+    </div>
+
+
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modal-title">Message</h3>
+            <p id="modal-message">Notification</p>
+            <input type="text" id="modal-input" class="input-field" style="display:none; margin: 10px 0;">
+            <select id="modal-select" class="input-field" style="display:none; margin: 10px 0;"></select>
+            <div id="modal-actions" class="button-group" style="justify-content: center; margin-top: 1rem;">
+                <button class="btn primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="firebase-init.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

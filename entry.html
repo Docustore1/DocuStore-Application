@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Details - Document Store</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body class="entry-body">
+    <div class="entry-container">
+        <img src="logo.png" alt="Logo" class="app-logo">
+        <h1>College Details</h1>
+        <p style="margin-bottom: 20px; color: #666;">Please enter your college information.</p>
+
+        <div class="form-group">
+            <input type="text" id="college-name" class="input-field" placeholder="College Name" required>
+        </div>
+
+        <div class="form-group">
+            <input type="text" id="user-name" class="input-field" placeholder="Your Name" required>
+        </div>
+
+        <div class="form-group">
+            <select id="user-role" class="input-field">
+                <option value="" disabled selected>Select Your Role</option>
+                <option value="Admin">Admin</option>
+                <option value="Principal">Principal</option>
+                <option value="Faculty">Faculty</option>
+                <option value="Student">Student</option>
+                <option value="Counter Staff">Counter Staff</option>
+                <option value="Library">Library</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <input type="text" id="courses" class="input-field" placeholder="Courses Offered (e.g. BCA, B.Tech)"
+                required>
+        </div>
+
+        <div class="form-group">
+            <textarea id="college-address" class="input-field" placeholder="College Address" rows="4"
+                required></textarea>
+        </div>
+
+        <div class="form-group">
+            <input type="text" id="erp-name" class="input-field"
+                placeholder="Which ERP are you using in college? (Optional)">
+        </div>
+
+        <div class="button-group">
+            <button id="btn-next-details" class="btn primary">Next</button>
+        </div>
+    </div>
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modal-title">Attention</h3>
+            <p id="modal-message">Please enter details.</p>
+            <input type="text" id="modal-input" class="input-field" style="display:none; margin: 10px 0;">
+            <select id="modal-select" class="input-field" style="display:none; margin: 10px 0;"></select>
+            <div id="modal-actions" class="button-group" style="justify-content: center; margin-top: 1rem;">
+                <button class="btn primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="firebase-init.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
