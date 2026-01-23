@@ -252,6 +252,23 @@ body {
     padding: 8px;
 }
 
+/* Dark Mode Modals */
+body.dark-mode .modal-box {
+    background: #2a2a2a;
+    color: #f0f0f0;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .modal-box p {
+    color: #cccccc !important;
+}
+
+body.dark-mode .modal-box h3 {
+    color: var(--primary-yellow) !important;
+}
+
+
+
 .btn-toolbar {
     background: #fff;
     border: 1px solid #ddd;
@@ -594,7 +611,7 @@ textarea.input-field {
 
 .modal-box p {
     margin-bottom: 1.5rem;
-    color: #555;
+    color: #333;
     font-size: 1.1rem;
 }
 
