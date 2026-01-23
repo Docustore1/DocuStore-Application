@@ -894,6 +894,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <!DOCTYPE html>
                             <html>
                             <head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                                 <title>${fileRecord.name} - Preview</title>
                                 <style>
                                     body {
@@ -902,23 +904,30 @@ document.addEventListener('DOMContentLoaded', () => {
                                         padding: 0;
                                         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                                         display: flex;
-                                        justify-content: center;
+                                        flex-direction: column;
+                                        align-items: center;
                                         min-height: 100vh;
+                                    }
+                                    #container {
+                                        width: 100%;
+                                        display: flex;
+                                        flex-direction: column;
+                                        align-items: center;
                                     }
                                     .page {
                                         background: white;
-                                        width: 100%; /* Full width on mobile */
-                                        max-width: 210mm; /* A4 width on desktop */
+                                        width: 95%;
+                                        max-width: 210mm; /* A4 width */
                                         min-height: 297mm; /* A4 height */
-                                        padding: 10mm; /* Reduced padding for mobile */
-                                        margin: 10px auto;
+                                        padding: 10mm;
+                                        margin: 20px auto;
                                         box-shadow: 0 0 10px rgba(0,0,0,0.5);
                                         box-sizing: border-box;
-                                        overflow: hidden; /* Prevent spillover */
+                                        overflow-wrap: break-word;
                                     }
                                     @media (min-width: 210mm) {
                                         .page {
-                                            padding: 20mm; /* Standard A4 padding for desktop */
+                                            padding: 20mm;
                                         }
                                     }
                                     p { line-height: 1.5; margin-bottom: 1em; }
