@@ -1694,6 +1694,7 @@ body.dark-mode .empty-state p {
 /* Fix for bullet point visibility in editor */
 .rich-text-area ul,
 .rich-text-area ol {
+    padding-left: 25px !important;
     margin-left: 10px !important;
 }
 
