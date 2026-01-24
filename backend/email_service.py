@@ -21,8 +21,8 @@ CORS(app)  # Allow requests from your frontend
 load_dotenv()
 
 # SMTP Configuration
-SMTP_SERVER = "smtp.gmail.com"  # Change to your SMTP server
-SMTP_PORT = 587
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 465  # Switched to 465 for SSL (more reliable on Render)
 SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "your-email@gmail.com")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "your-app-password")
 IMAP_SERVER = "imap.gmail.com"
@@ -30,10 +30,8 @@ IMAP_PORT = 993
 SMTP_DEBUG = os.environ.get("SMTP_DEBUG", "0") in ["1", "true", "True"]
 
 def send_email(to_email, subject, body, html_body=None):
-    """Send an email using SMTP.
-
-    Returns (success: bool, error_message: Optional[str])
-    """
+    """Send an email using SMTP_SSL on port 465."""
+    server = None
     try:
         # Create message
         msg = MIMEMultipart('alternative')
@@ -46,33 +44,38 @@ def send_email(to_email, subject, body, html_body=None):
         if html_body:
             msg.attach(MIMEText(html_body, 'html'))
 
-        # Connect to SMTP server
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
+        # Use SMTP_SSL for Port 465
+        print(f"Connecting to {SMTP_SERVER}:{SMTP_PORT}...")
+        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=30)
+        
         if SMTP_DEBUG:
             server.set_debuglevel(1)
 
         try:
+            print(f"Logging in as {SMTP_EMAIL}...")
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            print("Login successful. Sending email...")
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+            print("Email sent successfully.")
+            server.quit()
+            return True, None
         except smtplib.SMTPAuthenticationError as auth_err:
-            server.quit()
-            return False, f"Authentication failed: {auth_err}"
+            print(f"Authentication failed: {auth_err}")
+            if server:
+                server.quit()
+            return False, "Authentication failed. Check your email and app-specific password."
+        except Exception as e:
+            print(f"Error during SMTP session: {e}")
+            if server:
+                try:
+                    server.quit()
+                except:
+                    pass
+            return False, str(e)
 
-        # Send email
-        server.send_message(msg)
-        server.quit()
-
-        return True, None
     except Exception as e:
-        try:
-            server.quit()
-        except Exception:
-            pass
-        err = str(e)
-        print(f"Error sending email: {err}")
-        return False, err
+        print(f"Connection failed: {e}")
+        return False, f"Connection failed: {str(e)}"
 
 @app.route('/api/send-support-email', methods=['POST'])
 def send_support_email():
