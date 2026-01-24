@@ -8,43 +8,71 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 import os
+import imaplib
+import email
+from email.header import decode_header
+from html import escape
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 CORS(app)  # Allow requests from your frontend
+
+# Load environment variables from .env if present
+load_dotenv()
 
 # SMTP Configuration
 SMTP_SERVER = "smtp.gmail.com"  # Change to your SMTP server
 SMTP_PORT = 587
 SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "your-email@gmail.com")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "your-app-password")
+IMAP_SERVER = "imap.gmail.com"
+IMAP_PORT = 993
+SMTP_DEBUG = os.environ.get("SMTP_DEBUG", "0") in ["1", "true", "True"]
 
 def send_email(to_email, subject, body, html_body=None):
-    """Send an email using SMTP"""
+    """Send an email using SMTP.
+
+    Returns (success: bool, error_message: Optional[str])
+    """
     try:
         # Create message
         msg = MIMEMultipart('alternative')
         msg['From'] = SMTP_EMAIL
         msg['To'] = to_email
         msg['Subject'] = subject
-        
+
         # Add plain text and HTML versions
         msg.attach(MIMEText(body, 'plain'))
         if html_body:
             msg.attach(MIMEText(html_body, 'html'))
-        
+
         # Connect to SMTP server
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
+        server.ehlo()
         server.starttls()
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        
+        server.ehlo()
+        if SMTP_DEBUG:
+            server.set_debuglevel(1)
+
+        try:
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        except smtplib.SMTPAuthenticationError as auth_err:
+            server.quit()
+            return False, f"Authentication failed: {auth_err}"
+
         # Send email
         server.send_message(msg)
         server.quit()
-        
-        return True
+
+        return True, None
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
-        return False
+        try:
+            server.quit()
+        except Exception:
+            pass
+        err = str(e)
+        print(f"Error sending email: {err}")
+        return False, err
 
 @app.route('/api/send-support-email', methods=['POST'])
 def send_support_email():
@@ -108,12 +136,12 @@ MS College Support Team
     </html>
     """
     
-    sent = send_email(email, subject, body, html_body)
-    
+    sent, err = send_email(email, subject, body, html_body)
+
     if sent:
         return jsonify({"success": True, "message": "Confirmation email sent"}), 200
     else:
-        return jsonify({"success": False, "message": "Failed to send email"}), 500
+        return jsonify({"success": False, "message": "Failed to send email", "error": err}), 500
 
 @app.route('/api/send-feedback-notification', methods=['POST'])
 def send_feedback_notification():
@@ -183,17 +211,193 @@ MS College Team
     </html>
     """
     
-    sent = send_email(email, subject, body, html_body)
-    
-    if sent:
-        return jsonify({"success": True, "message": "Thank you email sent"}), 200
+    # Send to user
+    results = []
+    try:
+        sent_user, err_user = send_email(email, subject, body, html_body)
+        results.append({"to": email, "sent": sent_user, "error": err_user})
+    except Exception as e:
+        results.append({"to": email, "sent": False, "error": str(e)})
+
+    # Send admin copy to SMTP_EMAIL (owner)
+    try:
+        admin_subject = f"New Feedback Received - {name or 'Anonymous'}"
+        admin_body = f"Feedback received from {name or 'Anonymous'} ({email or 'no email provided'}).\n\nRating: {rating}\n\nComment:\n{comment}\n\nSubmitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        admin_html = f"<html><body><h2>New Feedback Received</h2><p><strong>From:</strong> {escape(email or 'Anonymous')}</p><p><strong>Rating:</strong> {rating}</p><p><strong>Comment:</strong><br/>{escape(comment)}</p><p style=\"color:#999;\">Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p></body></html>"
+        sent_admin, err_admin = send_email(SMTP_EMAIL, admin_subject, admin_body, admin_html)
+        results.append({"to": SMTP_EMAIL, "sent": sent_admin, "error": err_admin})
+    except Exception as e:
+        results.append({"to": SMTP_EMAIL, "sent": False, "error": str(e)})
+
+    ok = any(r.get('sent') for r in results)
+    if ok:
+        return jsonify({"success": True, "message": "Thank you email sent", "results": results}), 200
     else:
-        return jsonify({"success": False, "message": "Email failed but feedback saved"}), 200
+        return jsonify({"success": False, "message": "Email failed but feedback saved", "results": results}), 200
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "service": "email-service"}), 200
+
+
+def fetch_unseen_emails(max_messages=10):
+    """Fetch unseen emails from the Gmail account via IMAP."""
+    results = []
+    try:
+        mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        mail.login(SMTP_EMAIL, SMTP_PASSWORD)
+        mail.select("inbox")
+
+        typ, data = mail.search(None, 'UNSEEN')
+        if typ != 'OK':
+            return results
+
+        ids = data[0].split()
+        # Limit number of fetched messages
+        ids = ids[-max_messages:]
+
+        for msg_id in ids:
+            typ, msg_data = mail.fetch(msg_id, '(RFC822)')
+            if typ != 'OK':
+                continue
+
+            raw = msg_data[0][1]
+            msg = email.message_from_bytes(raw)
+
+            # Decode subject
+            subj, enc = decode_header(msg.get('Subject', ''))[0]
+            if isinstance(subj, bytes):
+                subj = subj.decode(enc or 'utf-8', errors='ignore')
+
+            from_ = msg.get('From')
+            date_ = msg.get('Date')
+
+            # Get a text snippet
+            snippet = ''
+            if msg.is_multipart():
+                for part in msg.walk():
+                    ctype = part.get_content_type()
+                    cdisp = str(part.get('Content-Disposition'))
+                    if ctype == 'text/plain' and 'attachment' not in cdisp:
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            snippet = payload.decode(part.get_content_charset() or 'utf-8', errors='ignore')
+                            break
+            else:
+                payload = msg.get_payload(decode=True)
+                if payload:
+                    snippet = payload.decode(msg.get_content_charset() or 'utf-8', errors='ignore')
+
+            results.append({
+                'id': msg_id.decode('utf-8'),
+                'subject': subj,
+                'from': from_,
+                'date': date_,
+                'snippet': snippet[:500]
+            })
+
+        mail.logout()
+    except Exception as e:
+        print(f"Error fetching emails: {e}")
+
+    return results
+
+
+@app.route('/api/fetch-emails', methods=['GET'])
+def api_fetch_emails():
+    """API endpoint to fetch unseen emails (read-only)."""
+    try:
+        max_messages = int(request.args.get('max', 10))
+    except Exception:
+        max_messages = 10
+
+    emails = fetch_unseen_emails(max_messages=max_messages)
+    return jsonify({'emails': emails}), 200
+
+
+def search_emails_by_subject(subject, max_messages=20):
+    results = []
+    try:
+        mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        mail.login(SMTP_EMAIL, SMTP_PASSWORD)
+        mail.select('inbox')
+
+        # Search by subject (case-insensitive)
+        typ, data = mail.search(None, '(SUBJECT "' + subject.replace('"', '') + '")')
+        if typ != 'OK':
+            mail.logout()
+            return results
+
+        ids = data[0].split()
+        ids = ids[-max_messages:]
+
+        for msg_id in ids:
+            typ, msg_data = mail.fetch(msg_id, '(RFC822)')
+            if typ != 'OK':
+                continue
+            raw = msg_data[0][1]
+            msg = email.message_from_bytes(raw)
+            subj, enc = decode_header(msg.get('Subject', ''))[0]
+            if isinstance(subj, bytes):
+                subj = subj.decode(enc or 'utf-8', errors='ignore')
+            from_ = msg.get('From')
+            date_ = msg.get('Date')
+            snippet = ''
+            if msg.is_multipart():
+                for part in msg.walk():
+                    if part.get_content_type() == 'text/plain' and 'attachment' not in str(part.get('Content-Disposition')):
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            snippet = payload.decode(part.get_content_charset() or 'utf-8', errors='ignore')
+                            break
+            else:
+                payload = msg.get_payload(decode=True)
+                if payload:
+                    snippet = payload.decode(msg.get_content_charset() or 'utf-8', errors='ignore')
+
+            results.append({'id': msg_id.decode('utf-8'), 'subject': subj, 'from': from_, 'date': date_, 'snippet': snippet[:500]})
+
+        mail.logout()
+    except Exception as e:
+        print(f"Error searching emails: {e}")
+    return results
+
+
+@app.route('/api/search-emails', methods=['GET'])
+def api_search_emails():
+    subject = request.args.get('subject', '')
+    try:
+        max_messages = int(request.args.get('max', 20))
+    except Exception:
+        max_messages = 20
+
+    if not subject:
+        return jsonify({'error': 'subject parameter required'}), 400
+
+    emails = search_emails_by_subject(subject, max_messages=max_messages)
+    return jsonify({'emails': emails}), 200
+
+
+@app.route('/api/test-email', methods=['POST'])
+def api_test_email():
+    """Endpoint to test sending an email and return server errors for debugging.
+
+    JSON body: {"email": "recipient@example.com", "subject": "sub", "body": "text"}
+    """
+    data = request.json or {}
+    to_email = data.get('email')
+    subject = data.get('subject', 'Test message from DocuStore')
+    body = data.get('body', 'This is a test message.')
+
+    if not to_email:
+        return jsonify({"error": "Missing 'email' in request body"}), 400
+
+    sent, err = send_email(to_email, subject, body)
+    if sent:
+        return jsonify({"success": True, "message": "Test email sent"}), 200
+    else:
+        return jsonify({"success": False, "message": "Test email failed", "error": err}), 500
 
 if __name__ == '__main__':
     # Run the server

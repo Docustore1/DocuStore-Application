@@ -175,22 +175,38 @@ window.fbMoveFile = async (id, newParentId) => {
 // 5. Submit Feedback (Scoped to User)
 window.fbSubmitFeedback = async (data) => {
     const user = auth.currentUser;
-    await addDoc(collection(db, "feedback"), {
+    const docRef = await addDoc(collection(db, "feedback"), {
         ...data,
         userId: user ? user.uid : 'anonymous',
         createdAt: new Date().toISOString()
     });
+    return { id: docRef.id };
+};
+
+// Update feedback document status (e.g., emailSent)
+window.fbUpdateFeedbackStatus = async (id, statusObj) => {
+    const docRef = doc(db, "feedback", id);
+    await updateDoc(docRef, statusObj);
+    return true;
 };
 
 // 6. Submit Support Ticket (Scoped to User)
 window.fbSubmitTicket = async (data) => {
     const user = auth.currentUser;
-    await addDoc(collection(db, "tickets"), {
+    const docRef = await addDoc(collection(db, "tickets"), {
         ...data,
         userId: user ? user.uid : 'anonymous',
         createdAt: new Date().toISOString(),
         status: 'Open'
     });
+    return { id: docRef.id };
+};
+
+// Update ticket document status (e.g., emailSent)
+window.fbUpdateTicketStatus = async (id, statusObj) => {
+    const docRef = doc(db, "tickets", id);
+    await updateDoc(docRef, statusObj);
+    return true;
 };
 
 // 7. Fetch Feedback (Only yours)

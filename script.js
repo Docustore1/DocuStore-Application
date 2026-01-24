@@ -1274,12 +1274,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const ticketData = { email, type, desc };
 
+            let ticketId = null;
             try {
-                await window.fbSubmitTicket(ticketData);
+                // Save ticket and get id
+                if (window.fbSubmitTicket) {
+                    const res = await window.fbSubmitTicket(ticketData);
+                    ticketId = res && res.id;
+                }
+
+                // Trigger backend support email
+                try {
+                    const backend = 'http://127.0.0.1:5000';
+                    const resp = await fetch(`${backend}/api/send-support-email`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, type, desc })
+                    });
+                    const j = await resp.json().catch(() => null);
+                    const ok = resp.ok || (j && j.success);
+                    if (ticketId && window.fbUpdateTicketStatus) {
+                        await window.fbUpdateTicketStatus(ticketId, { emailSent: ok, emailSentAt: ok ? new Date().toISOString() : null });
+                    }
+                    if (!ok) console.warn('Support email failed', j || resp.statusText);
+                } catch (e) {
+                    console.warn('Support email failed', e);
+                    if (ticketId && window.fbUpdateTicketStatus) {
+                        await window.fbUpdateTicketStatus(ticketId, { emailSent: false });
+                    }
+                }
+
                 showModal("Ticket submitted! We will contact you soon.");
                 document.getElementById('support-desc').value = '';
                 loadTickets();
             } catch (e) {
+                console.error(e);
                 showModal("Error submitting ticket.");
             }
         });
@@ -1302,12 +1329,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.className = 'file-item';
                 item.style.justifyContent = 'space-between';
 
+                const emailBadge = ticket.emailSent ? `<div style="font-size:0.8rem;color:green">Email Sent ✓</div>` : `<div style="font-size:0.8rem;color:#999">Email Pending</div>`;
+
                 item.innerHTML = `
-        < div >
-                        <div style="font-weight: bold;">${ticket.type}</div>
-                        <div style="font-size: 0.9rem; color: #555;">${ticket.desc}</div>
-                    </div >
+        <div>
+            <div style="font-weight: bold;">${escapeHtml(ticket.type)}</div>
+            <div style="font-size: 0.9rem; color: #555;">${escapeHtml(ticket.desc)}</div>
+        </div>
         <div style="text-align: right;">
+            ${emailBadge}
             <div style="font-weight: bold; color: ${ticket.status === 'Open' ? 'green' : 'gray'};">${ticket.status}</div>
             <div style="font-size: 0.8rem; color: #999;">${new Date(ticket.createdAt).toLocaleDateString()}</div>
         </div>
@@ -1673,5 +1703,140 @@ document.addEventListener('DOMContentLoaded', () => {
             previewModal.style.display = 'flex';
             document.body.style.overflow = 'hidden'; // Prevent main page scroll
         }
+    }
+
+    // --- Feedback Form & Review Logic ---
+    function renderFeedbackItems(items) {
+        const container = document.getElementById('feedback-list');
+        if (!container) return;
+
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No feedback yet.</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(f => {
+            const stars = '★'.repeat(Number(f.rating || 0)) + '☆'.repeat(5 - Number(f.rating || 0));
+            const date = f.createdAt ? new Date(f.createdAt).toLocaleString() : '';
+            return `
+                <div class="file-item">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-weight:700;">${escapeHtml(f.name || 'Anonymous')}</div>
+                        <div style="color:#ffa500;">${stars}</div>
+                    </div>
+                    <div style="margin-top:8px; color:#555;">${escapeHtml(f.comment || '')}</div>
+                    <div style="text-align:right; font-size:0.85rem; color:#999; margin-top:8px;">${date}</div>
+                </div>`;
+        }).join('');
+    }
+
+    async function loadFeedback() {
+        const container = document.getElementById('feedback-list');
+        if (!container) return;
+        container.innerHTML = '<div style="text-align:center;color:#666;padding:2rem;">Loading feedback...</div>';
+        try {
+            if (window.fbFetchFeedback) {
+                const items = await window.fbFetchFeedback();
+                renderFeedbackItems(items);
+            } else {
+                container.innerHTML = '<div style="text-align:center;color:#666;padding:2rem;">Feedback service unavailable.</div>';
+            }
+        } catch (e) {
+            console.error('Load feedback error', e);
+            container.innerHTML = '<div style="text-align:center;color:#d32f2f;padding:2rem;">Failed to load feedback.</div>';
+        }
+    }
+
+    // Simple XSS escape for text content
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"]+/g, function (s) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[s];
+        });
+    }
+
+    // Wire up feedback form controls if present
+    const feedbackListEl = document.getElementById('feedback-list');
+    const feedbackSubmitBtn = document.getElementById('btn-submit-feedback');
+    const feedbackName = document.getElementById('feedback-name');
+    const feedbackRating = document.getElementById('feedback-rating');
+    const feedbackComment = document.getElementById('feedback-comment');
+    const feedbackStars = document.querySelectorAll('#star-rating .star');
+
+    if (feedbackStars && feedbackStars.length) {
+        feedbackStars.forEach(s => s.addEventListener('click', (e) => {
+            const v = e.target.getAttribute('data-value');
+            feedbackRating.value = v;
+            // Visual update
+            feedbackStars.forEach(st => st.style.opacity = (st.getAttribute('data-value') <= v) ? '1' : '0.4');
+            const ratingText = document.getElementById('rating-text');
+            if (ratingText) ratingText.textContent = `You rated ${v} star${v > 1 ? 's' : ''}`;
+        }));
+    }
+
+    if (feedbackSubmitBtn) {
+        feedbackSubmitBtn.addEventListener('click', async () => {
+            const name = feedbackName ? feedbackName.value.trim() : '';
+            const rating = feedbackRating ? Number(feedbackRating.value || 0) : 0;
+            const comment = feedbackComment ? feedbackComment.value.trim() : '';
+
+            if (!name) { showModal('Please enter your name.'); return; }
+            if (!rating || rating < 1) { showModal('Please select a rating.'); return; }
+            if (!comment) { showModal('Please add a comment.'); return; }
+
+            let feedbackId = null;
+
+            try {
+                feedbackSubmitBtn.disabled = true; feedbackSubmitBtn.textContent = 'Submitting...';
+
+                // Save to Firestore and get id
+                if (window.fbSubmitFeedback) {
+                    const result = await window.fbSubmitFeedback({ name, rating, comment });
+                    feedbackId = result && result.id;
+                }
+
+                // Trigger backend email notification and update status in Firestore
+                try {
+                    const userEmail = window.firebaseAuth && window.firebaseAuth.currentUser ? window.firebaseAuth.currentUser.email : null;
+                    const backend = 'http://127.0.0.1:5000';
+                    const res = await fetch(`${backend}/api/send-feedback-notification`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, rating, comment, email: userEmail })
+                    });
+                    const j = await res.json().catch(() => null);
+                    const ok = res.ok || (j && j.success);
+                    if (feedbackId && window.fbUpdateFeedbackStatus) {
+                        await window.fbUpdateFeedbackStatus(feedbackId, { emailSent: ok, emailSentAt: ok ? new Date().toISOString() : null });
+                    }
+                    if (!ok) console.warn('Email notification failed', j || res.statusText);
+                } catch (e) {
+                    console.warn('Email notification failed', e);
+                    if (feedbackId && window.fbUpdateFeedbackStatus) {
+                        await window.fbUpdateFeedbackStatus(feedbackId, { emailSent: false });
+                    }
+                }
+
+                // Refresh list
+                await loadFeedback();
+
+                // Clear form
+                if (feedbackName) feedbackName.value = '';
+                if (feedbackRating) feedbackRating.value = '0';
+                if (feedbackComment) feedbackComment.value = '';
+                const ratingText = document.getElementById('rating-text'); if (ratingText) ratingText.textContent = 'Select a rating';
+
+                showModal('Thank you for your feedback!');
+            } catch (e) {
+                console.error('Submit feedback error', e);
+                showModal('Failed to submit feedback.');
+            } finally {
+                feedbackSubmitBtn.disabled = false; feedbackSubmitBtn.textContent = 'Submit Feedback';
+            }
+        });
+    }
+
+    // If on feedback page, load feedback on startup
+    if (document.getElementById('feedback-list')) {
+        loadFeedback();
     }
 });

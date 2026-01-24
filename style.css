@@ -798,6 +798,38 @@ body.dark-mode .rich-text-toolbar {
     border-color: #444;
 }
 
+/* Feedback card styles (user-friendly view) */
+.feedback-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border: 1px solid #f0f0f0;
+}
+.feedback-card .meta {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+.feedback-card .author {
+    font-weight:700;
+}
+.feedback-card .rating {
+    color: #ffa500;
+}
+.feedback-card .comment {
+    margin-top:8px;
+    color:#444;
+}
+.feedback-card .time {
+    margin-top:10px;
+    text-align:right;
+    color:#999;
+    font-size:0.85rem;
+}
+
 body.dark-mode .btn-toolbar {
     background-color: #333;
     border-color: #444;
