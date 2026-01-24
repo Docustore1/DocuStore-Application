@@ -850,12 +850,31 @@ body.dark-mode .rich-text-toolbar {
         padding: 0 0.25rem;
     }
 
+    /* Make footer links compact circular icons on small screens */
     .footer-links a {
-        padding: 10px 14px;
-        border-radius: 999px;
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        border-radius: 50%;
         background: rgba(255,255,255,0.95);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.10);
         font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+        text-indent: -9999px; /* hide text but keep accessible */
+    }
+
+    /* Add emoji icons before each link (keeps HTML unchanged) */
+    #link-feedback::before { content: "📝"; font-size: 1.3rem; display: inline-block; }
+    #link-support::before { content: "🛠️"; font-size: 1.2rem; display: inline-block; }
+
+    .footer-links a.active-link {
+        background: white;
+        color: var(--primary-orange);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
     }
 
     .footer-links a.active-link {
