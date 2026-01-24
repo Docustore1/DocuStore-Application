@@ -14,17 +14,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user) {
                 console.log("👤 User Logged In:", user.email);
 
-                // If on entry page, check if profile exists
-                if (window.location.pathname.endsWith('entry.html') || window.location.pathname.endsWith('index.html')) {
-                    const settings = await window.fbLoadSettings();
-                    if (settings && settings.collegeName) {
+                const settings = await window.fbLoadSettings();
+                const hasProfile = settings && settings.collegeName;
+
+                // 1. If Profile Complete -> Go to Store (if on entry or details)
+                if (hasProfile) {
+                    if (window.location.pathname.endsWith('entry.html') ||
+                        window.location.pathname.endsWith('index.html') ||
+                        window.location.pathname.endsWith('details.html')) {
                         window.location.href = 'store.html';
-                    } else {
-                        // Profile incomplete, show details form
-                        const authSection = document.getElementById('auth-section');
-                        const detailsSection = document.getElementById('details-section');
-                        if (authSection) authSection.style.display = 'none';
-                        if (detailsSection) detailsSection.style.display = 'block';
+                    }
+                }
+                // 2. If Profile Incomplete -> Go to Details (if on entry)
+                else {
+                    if (window.location.pathname.endsWith('entry.html') ||
+                        window.location.pathname.endsWith('index.html')) {
+                        window.location.href = 'details.html';
                     }
                 }
 
@@ -33,20 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userEmailDisp) userEmailDisp.textContent = user.email;
 
                 // Debug: Log user info
-                console.log("🔑 User ID:", user.uid);
+                console.log("🔍 User ID:", user.uid);
                 console.log("📧 Email:", user.email);
 
                 // Load and display user profile
-                if (typeof window.fbLoadSettings === 'function') {
-                    window.fbLoadSettings().then(settings => {
-                        if (settings && settings.collegeName) {
-                            localStorage.setItem('docStore_collegeName', settings.collegeName);
-                            localStorage.setItem('docStore_userName', settings.userName || '');
-                            localStorage.setItem('docStore_userRole', settings.userRole || '');
-                            const nameDisplay = document.getElementById('college-name-display');
-                            if (nameDisplay) nameDisplay.textContent = settings.collegeName;
-                        }
-                    }).catch(err => console.error("Profile load error:", err));
+                if (hasProfile) {
+                    localStorage.setItem('docStore_collegeName', settings.collegeName);
+                    localStorage.setItem('docStore_userName', settings.userName || '');
+                    localStorage.setItem('docStore_userRole', settings.userRole || '');
+                    const nameDisplay = document.getElementById('college-name-display');
+                    if (nameDisplay) nameDisplay.textContent = settings.collegeName;
                 }
 
                 // Load data for store display
@@ -59,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Protected route protection: Redirect to entry
                 if (window.location.pathname.endsWith('store.html') ||
                     window.location.pathname.endsWith('feedback.html') ||
-                    window.location.pathname.endsWith('support.html')) {
+                    window.location.pathname.endsWith('support.html') ||
+                    window.location.pathname.endsWith('details.html')) {
                     window.location.href = 'entry.html';
                 }
             }
@@ -144,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (errorMsg.includes('auth/wrong-password')) errorMsg = "Incorrect password.";
                 else if (errorMsg.includes('auth/email-already-in-use')) errorMsg = "Email already in use.";
                 else if (errorMsg.includes('auth/weak-password')) errorMsg = "Password is too weak (min 6 characters).";
+                else if (errorMsg.includes('auth/invalid-credential')) errorMsg = "Incorrect Email or Password.";
 
                 showModal("Auth Failed: " + errorMsg);
                 authBtn.disabled = false; authBtn.textContent = isSignupMode ? "Create Account" : "Login";
@@ -572,6 +575,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    function showSelect(message, options, onConfirm) {
+        const modal = document.getElementById('custom-modal');
+        const msg = document.getElementById('modal-message');
+        const actions = document.getElementById('modal-actions');
+        const input = document.getElementById('modal-input');
+        const select = document.getElementById('modal-select');
+        const title = document.getElementById('modal-title');
+
+        if (modal && msg && actions && select) {
+            msg.textContent = message;
+            if (title) title.textContent = 'Select Option';
+            if (input) input.style.display = 'none';
+            select.style.display = 'block';
+            select.innerHTML = '';
+
+            options.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt.value;
+                el.textContent = opt.text;
+                select.appendChild(el);
+            });
+
+            actions.innerHTML = '';
+
+            const btnOk = document.createElement('button');
+            btnOk.className = 'btn primary';
+            btnOk.textContent = 'Move';
+            btnOk.onclick = () => {
+                onConfirm(select.value);
+                closeModal();
+            };
+
+            const btnCancel = document.createElement('button');
+            btnCancel.className = 'btn secondary';
+            btnCancel.textContent = 'Cancel';
+            btnCancel.onclick = closeModal;
+
+            actions.appendChild(btnOk);
+            actions.appendChild(btnCancel);
+
+            modal.style.display = 'flex';
+            setTimeout(() => select.focus(), 50);
+        }
+    }
+
+    window.closeModal = function () {
+        const modal = document.getElementById('custom-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
     function showConfirm(message, onConfirm) {
         const modal = document.getElementById('custom-modal');
         const msg = document.getElementById('modal-message');
@@ -772,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await window.fbUploadFile(file, folderIdToUse);
-            showModal("Upload Successful!");
+            showModal("Saved to Store Successfully!");
             loadFilesFromDB();
         } catch (e) {
             showModal("Upload Failed: " + e.message);
@@ -874,14 +929,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Click to enter folder
         if (fileRecord.isFolder) {
-            item.querySelector('.file-info-clickable').addEventListener('click', () => {
-                // Push current to history
-                // We need the Name of the current folder to push to history, right?
-                // History tracks PARENTS.
-                // If I am at 'root', name is 'Home'.
-                // If I am browsing 'Docs' (id=1), Current is 1. Parent is root.
+            const clickArea = item.querySelector('.file-info-clickable');
+            clickArea.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log(`📂 Entering folder: ${fileRecord.name} (${fileRecord.id})`);
 
-                // Let's rely on looking up currentFolderId in allFilesData to get name if needed
+                // Construct history item
                 let cName = 'Home';
                 if (currentFolderId !== 'root') {
                     const c = allFilesData.find(f => f.id === currentFolderId);
@@ -890,6 +943,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 folderHistory.push({ id: currentFolderId, name: cName });
                 currentFolderId = fileRecord.id;
+
+                // Force update
                 renderFileList();
             });
         }
@@ -1158,104 +1213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- Feedback Page Logic ---
-    const btnSubmitFeedback = document.getElementById('btn-submit-feedback');
-    const feedbackList = document.getElementById('feedback-list');
 
-    // Star Rating Logic
-    const stars = document.querySelectorAll('.star-rating .star');
-    const ratingInput = document.getElementById('feedback-rating');
-    const ratingText = document.getElementById('rating-text');
-
-    if (stars.length > 0 && ratingInput) {
-        stars.forEach(star => {
-            star.addEventListener('mouseover', () => {
-                const value = parseInt(star.getAttribute('data-value'));
-                highlightStars(value, 'hovered');
-            });
-            star.addEventListener('mouseout', () => {
-                resetStars('hovered');
-            });
-            star.addEventListener('click', () => {
-                const value = parseInt(star.getAttribute('data-value'));
-                ratingInput.value = value;
-                ratingText.textContent = `You selected: ${value} Star${value > 1 ? 's' : ''} `;
-                resetStars('selected');
-                highlightStars(value, 'selected');
-            });
-        });
-
-        function highlightStars(value, className) {
-            stars.forEach(s => {
-                if (parseInt(s.getAttribute('data-value')) <= value) {
-                    s.classList.add(className);
-                }
-            });
-        }
-
-        function resetStars(className) {
-            stars.forEach(s => s.classList.remove(className));
-        }
-    }
-
-    if (btnSubmitFeedback) {
-        btnSubmitFeedback.addEventListener('click', async () => {
-            const name = document.getElementById('feedback-name').value;
-            const rating = document.getElementById('feedback-rating').value;
-            const comment = document.getElementById('feedback-comment').value;
-
-            if (!name || !comment || rating === '0') {
-                showModal("Please fill in name, rating, and comments.");
-                return;
-            }
-
-            const feedbackData = { name, rating, comment };
-
-            try {
-                await window.fbSubmitFeedback(feedbackData);
-                showModal("Thank you for your feedback!");
-                document.getElementById('feedback-name').value = '';
-                document.getElementById('feedback-comment').value = '';
-                document.getElementById('feedback-rating').value = '0';
-                resetStars('selected');
-                ratingText.textContent = 'Select a rating';
-
-                loadFeedback();
-            } catch (e) {
-                console.error(e);
-                showModal("Error submitting feedback: " + (e.message || e));
-            }
-        });
-    }
-
-    async function loadFeedback() {
-        if (!feedbackList) return;
-        try {
-            const feedbacks = await window.fbFetchFeedback();
-            feedbackList.innerHTML = '';
-            if (feedbacks.length === 0) {
-                feedbackList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No feedback yet.</div>';
-                return;
-            }
-
-            feedbacks.forEach(fb => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.style.flexDirection = 'column';
-                item.style.alignItems = 'flex-start';
-                item.style.padding = '15px';
-
-                const stars = '⭐'.repeat(fb.rating);
-                item.innerHTML = `
-        < div style = "font-weight: bold; font-size: 1.1rem;" > ${stars}</div >
-                    <div style="font-weight: 600; margin-top: 5px;">${fb.name}</div>
-                    <div style="color: #555; margin-top: 5px;">${fb.comment}</div>
-                    <div style="font-size: 0.8rem; color: #999; margin-top: 10px; align-self: flex-end;">${new Date(fb.createdAt).toLocaleDateString()}</div>
-    `;
-                feedbackList.appendChild(item);
-            });
-        } catch (e) { console.error(e); }
-    }
 
     // --- Support Page Logic ---
     const btnSubmitSupport = document.getElementById('btn-submit-support');
@@ -1276,7 +1234,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let ticketId = null;
             try {
-                // Save ticket and get id
+                showModal("Submitting ticket...");
+
+                // Save ticket to Firebase (if available)
                 if (window.fbSubmitTicket) {
                     const res = await window.fbSubmitTicket(ticketData);
                     ticketId = res && res.id;
@@ -1291,9 +1251,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     const j = await resp.json().catch(() => null);
                     const ok = resp.ok || (j && j.success);
+
                     if (ticketId && window.fbUpdateTicketStatus) {
                         await window.fbUpdateTicketStatus(ticketId, { emailSent: ok, emailSentAt: ok ? new Date().toISOString() : null });
                     }
+
                     if (!ok) console.warn('Support email failed', j || resp.statusText);
                 } catch (e) {
                     console.warn('Support email failed', e);
@@ -1312,40 +1274,144 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function loadTickets() {
-        if (!ticketList) return;
-        try {
-            // We need to fetch tickets... but wait, did I define fbFetchTickets in script.js scope? 
-            // It's in window.fbFetchTickets.
-            const tickets = await window.fbFetchTickets();
-            ticketList.innerHTML = '';
-            if (tickets.length === 0) {
-                ticketList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No support tickets found.</div>';
+
+    // --- Feedback Page Logic ---
+    const btnSubmitFeedback = document.getElementById('btn-submit-feedback');
+    const feedbackList = document.getElementById('feedback-list');
+
+    if (btnSubmitFeedback) {
+        // Star Rating Logic
+        const starRating = document.getElementById('star-rating');
+        const ratingInput = document.getElementById('feedback-rating');
+        const ratingText = document.getElementById('rating-text');
+
+        if (starRating) {
+            const stars = starRating.querySelectorAll('.star');
+            stars.forEach(star => {
+                star.addEventListener('click', () => {
+                    const val = parseInt(star.getAttribute('data-value'));
+                    ratingInput.value = val;
+                    ratingText.textContent = `You selected: ${val} Star${val > 1 ? 's' : ''}`;
+
+                    // Visual update
+                    stars.forEach(s => {
+                        if (parseInt(s.getAttribute('data-value')) <= val) s.style.color = 'orange';
+                        else s.style.color = '#ccc';
+                    });
+                });
+            });
+        }
+
+        btnSubmitFeedback.addEventListener('click', async () => {
+            const name = document.getElementById('feedback-name').value.trim();
+            const rating = document.getElementById('feedback-rating').value;
+            const comment = document.getElementById('feedback-comment').value.trim();
+
+            if (!name || rating === "0" || !comment) {
+                showModal("Please provide your name, a rating, and a comment.");
                 return;
             }
 
-            tickets.forEach(ticket => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.style.justifyContent = 'space-between';
+            // Optional: User email (not in form, maybe from auth or prompt?)
+            const email = localStorage.getItem('docStore_userEmail') || '';
 
-                const emailBadge = ticket.emailSent ? `<div style="font-size:0.8rem;color:green">Email Sent ✓</div>` : `<div style="font-size:0.8rem;color:#999">Email Pending</div>`;
+            showModal("Sending feedback...");
 
-                item.innerHTML = `
-        <div>
-            <div style="font-weight: bold;">${escapeHtml(ticket.type)}</div>
-            <div style="font-size: 0.9rem; color: #555;">${escapeHtml(ticket.desc)}</div>
-        </div>
-        <div style="text-align: right;">
-            ${emailBadge}
-            <div style="font-weight: bold; color: ${ticket.status === 'Open' ? 'green' : 'gray'};">${ticket.status}</div>
-            <div style="font-size: 0.8rem; color: #999;">${new Date(ticket.createdAt).toLocaleDateString()}</div>
-        </div>
-    `;
-                ticketList.appendChild(item);
-            });
-        } catch (e) { console.error(e); }
+            try {
+                // 1. Send to Backend (SMTP)
+                const backend = 'http://127.0.0.1:5000';
+                const resp = await fetch(`${backend}/api/send-feedback-notification`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, rating, comment, email })
+                });
+
+                const j = await resp.json().catch(() => null);
+
+                if (resp.ok) {
+                    showModal("Feedback Sent! Thank you.");
+                    // Clear form
+                    document.getElementById('feedback-name').value = '';
+                    document.getElementById('feedback-comment').value = '';
+                    loadFeedback(); // Refresh list from email
+                } else {
+                    showModal("Failed to send feedback: " + (j?.message || resp.statusText));
+                }
+            } catch (e) {
+                console.error(e);
+                showModal("Error connecting to server.");
+            }
+        });
     }
+
+    // Helper to fetch emails
+    async function fetchEmailsFromBackend(subject) {
+        try {
+            const backend = 'http://127.0.0.1:5000';
+            const resp = await fetch(`${backend}/api/search-emails?subject=${encodeURIComponent(subject)}&max=20`);
+            const data = await resp.json();
+            return data.emails || [];
+        } catch (e) {
+            console.error("Error fetching emails:", e);
+            return [];
+        }
+    }
+
+    async function loadFeedback() {
+        if (!feedbackList) return;
+        feedbackList.innerHTML = '<div style="text-align:center;">Loading reviews...</div>';
+
+        const emails = await fetchEmailsFromBackend("Feedback");
+
+        feedbackList.innerHTML = '';
+        if (emails.length === 0) {
+            feedbackList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No feedback found via email.</div>';
+            return;
+        }
+
+        emails.forEach(email => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            // Parse snippet for details if possible, or just show subject/snippet
+            item.innerHTML = `
+                <div>
+                    <div style="font-weight: 600;">${email.subject}</div>
+                    <div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${email.snippet}</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 8px;">From: ${email.from} | ${email.date}</div>
+                </div>
+            `;
+            feedbackList.appendChild(item);
+        });
+    }
+
+    async function loadTickets() {
+        // Updated to use Email Backend primarily
+        const ticketList = document.getElementById('ticket-list');
+        if (!ticketList) return;
+
+        ticketList.innerHTML = '<div style="text-align:center;">Loading tickets...</div>';
+        const emails = await fetchEmailsFromBackend("Support"); // Matches subject in email_service.py
+
+        ticketList.innerHTML = '';
+        if (emails.length === 0) {
+            ticketList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No support tickets found via email.</div>';
+            return;
+        }
+
+        emails.forEach(email => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = `
+                <div>
+                    <div style="font-weight: 600;">${email.subject}</div>
+                    <div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${email.snippet}</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 8px;">From: ${email.from} | ${email.date}</div>
+                </div>
+            `;
+            ticketList.appendChild(item);
+        });
+    }
+
 
     // --- Initialize ---
     // Note: Data loading (files, feedback, tickets) is triggered inside window.fbOnAuthStateChanged
@@ -1519,161 +1585,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    // Custom Modal Functions (Global Scope)
-    function showModal(message) {
-        const modal = document.getElementById('custom-modal');
-        const msg = document.getElementById('modal-message');
-        const actions = document.getElementById('modal-actions');
-        const input = document.getElementById('modal-input');
-        const select = document.getElementById('modal-select');
-        const title = document.getElementById('modal-title');
 
-        if (modal && msg && actions) {
-            msg.textContent = message;
-            if (title) title.textContent = 'Notification';
-            if (input) input.style.display = 'none';
-            if (select) select.style.display = 'none';
-
-            actions.innerHTML = '<button class="btn primary" onclick="closeModal()">OK</button>';
-            modal.style.display = 'flex';
-        } else {
-            alert(message);
-        }
-    }
-
-    function showConfirm(message, onConfirm) {
-        const modal = document.getElementById('custom-modal');
-        const msg = document.getElementById('modal-message');
-        const actions = document.getElementById('modal-actions');
-        const input = document.getElementById('modal-input');
-        const select = document.getElementById('modal-select');
-        const title = document.getElementById('modal-title');
-
-        if (modal && msg && actions) {
-            msg.textContent = message;
-            if (title) title.textContent = 'Confirm Action';
-            if (input) input.style.display = 'none';
-            if (select) select.style.display = 'none';
-
-            actions.innerHTML = '';
-
-            const btnYes = document.createElement('button');
-            btnYes.className = 'btn primary';
-            btnYes.textContent = 'Yes';
-            btnYes.onclick = () => {
-                onConfirm();
-                closeModal();
-            };
-
-            const btnCancel = document.createElement('button');
-            btnCancel.className = 'btn secondary';
-            btnCancel.textContent = 'Cancel';
-            btnCancel.onclick = closeModal;
-
-            actions.appendChild(btnYes);
-            actions.appendChild(btnCancel);
-
-            modal.style.display = 'flex';
-        } else {
-            if (confirm(message)) {
-                onConfirm();
-            }
-        }
-    }
-
-    function showPrompt(message, onConfirm) {
-        const modal = document.getElementById('custom-modal');
-        const msg = document.getElementById('modal-message');
-        const actions = document.getElementById('modal-actions');
-        const input = document.getElementById('modal-input');
-        const select = document.getElementById('modal-select');
-        const title = document.getElementById('modal-title');
-
-        if (modal && msg && actions && input) {
-            msg.textContent = message;
-            if (title) title.textContent = 'Input Required';
-            input.style.display = 'block';
-            if (select) select.style.display = 'none';
-            input.value = '';
-            input.focus();
-
-            actions.innerHTML = '';
-
-            const btnOk = document.createElement('button');
-            btnOk.className = 'btn primary';
-            btnOk.textContent = 'OK';
-            btnOk.onclick = () => {
-                onConfirm(input.value);
-                closeModal();
-            };
-
-            const btnCancel = document.createElement('button');
-            btnCancel.className = 'btn secondary';
-            btnCancel.textContent = 'Cancel';
-            btnCancel.onclick = closeModal;
-
-            actions.appendChild(btnOk);
-            actions.appendChild(btnCancel);
-
-            modal.style.display = 'flex';
-            setTimeout(() => input.focus(), 50);
-        } else {
-            const result = prompt(message);
-            if (result !== null) onConfirm(result);
-        }
-    }
-
-    function showSelect(message, options, onConfirm) {
-        const modal = document.getElementById('custom-modal');
-        const msg = document.getElementById('modal-message');
-        const actions = document.getElementById('modal-actions');
-        const input = document.getElementById('modal-input');
-        const select = document.getElementById('modal-select');
-        const title = document.getElementById('modal-title');
-
-        if (modal && msg && actions && select) {
-            msg.textContent = message;
-            if (title) title.textContent = 'Select Option';
-            if (input) input.style.display = 'none';
-            select.style.display = 'block';
-            select.innerHTML = '';
-
-            options.forEach(opt => {
-                const el = document.createElement('option');
-                el.value = opt.value;
-                el.textContent = opt.text;
-                select.appendChild(el);
-            });
-
-            actions.innerHTML = '';
-
-            const btnOk = document.createElement('button');
-            btnOk.className = 'btn primary';
-            btnOk.textContent = 'Move';
-            btnOk.onclick = () => {
-                onConfirm(select.value);
-                closeModal();
-            };
-
-            const btnCancel = document.createElement('button');
-            btnCancel.className = 'btn secondary';
-            btnCancel.textContent = 'Cancel';
-            btnCancel.onclick = closeModal;
-
-            actions.appendChild(btnOk);
-            actions.appendChild(btnCancel);
-
-            modal.style.display = 'flex';
-            setTimeout(() => select.focus(), 50);
-        }
-    }
-
-    window.closeModal = function () {
-        const modal = document.getElementById('custom-modal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-    };
 
     // Preview Modal Logic
     window.closePreview = () => {
@@ -1705,49 +1617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Feedback Form & Review Logic ---
-    function renderFeedbackItems(items) {
-        const container = document.getElementById('feedback-list');
-        if (!container) return;
-
-        if (!items || items.length === 0) {
-            container.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No feedback yet.</div>';
-            return;
-        }
-
-        container.innerHTML = items.map(f => {
-            const stars = '★'.repeat(Number(f.rating || 0)) + '☆'.repeat(5 - Number(f.rating || 0));
-            const date = f.createdAt ? new Date(f.createdAt).toLocaleString() : '';
-            return `
-                <div class="feedback-card">
-                    <div class="meta">
-                        <div class="author">${escapeHtml(f.name || 'Anonymous')}</div>
-                        <div class="rating">${stars}</div>
-                    </div>
-                    <div class="comment">${escapeHtml(f.comment || '')}</div>
-                    <div class="time">${date}</div>
-                </div>`;
-        }).join('');
-    }
-
-    async function loadFeedback() {
-        const container = document.getElementById('feedback-list');
-        if (!container) return;
-        container.innerHTML = '<div style="text-align:center;color:#666;padding:2rem;">Loading feedback...</div>';
-        try {
-            if (window.fbFetchFeedback) {
-                const items = await window.fbFetchFeedback();
-                renderFeedbackItems(items);
-            } else {
-                container.innerHTML = '<div style="text-align:center;color:#666;padding:2rem;">Feedback service unavailable.</div>';
-            }
-        } catch (e) {
-            console.error('Load feedback error', e);
-            container.innerHTML = '<div style="text-align:center;color:#d32f2f;padding:2rem;">Failed to load feedback.</div>';
-        }
-    }
-
-    // Simple XSS escape for text content
+    // Helper for XSS prevention
     function escapeHtml(str) {
         if (!str) return '';
         return String(str).replace(/[&<>"]+/g, function (s) {
@@ -1755,88 +1625,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Wire up feedback form controls if present
-    const feedbackListEl = document.getElementById('feedback-list');
-    const feedbackSubmitBtn = document.getElementById('btn-submit-feedback');
-    const feedbackName = document.getElementById('feedback-name');
-    const feedbackRating = document.getElementById('feedback-rating');
-    const feedbackComment = document.getElementById('feedback-comment');
-    const feedbackStars = document.querySelectorAll('#star-rating .star');
+    // --- Feedback Page Logic (Email Based) ---
+    // (Consolidated above)
 
-    if (feedbackStars && feedbackStars.length) {
-        feedbackStars.forEach(s => s.addEventListener('click', (e) => {
-            const v = e.target.getAttribute('data-value');
-            feedbackRating.value = v;
-            // Visual update
-            feedbackStars.forEach(st => st.style.opacity = (st.getAttribute('data-value') <= v) ? '1' : '0.4');
-            const ratingText = document.getElementById('rating-text');
-            if (ratingText) ratingText.textContent = `You rated ${v} star${v > 1 ? 's' : ''}`;
-        }));
-    }
-
-    if (feedbackSubmitBtn) {
-        feedbackSubmitBtn.addEventListener('click', async () => {
-            const name = feedbackName ? feedbackName.value.trim() : '';
-            const rating = feedbackRating ? Number(feedbackRating.value || 0) : 0;
-            const comment = feedbackComment ? feedbackComment.value.trim() : '';
-
-            if (!name) { showModal('Please enter your name.'); return; }
-            if (!rating || rating < 1) { showModal('Please select a rating.'); return; }
-            if (!comment) { showModal('Please add a comment.'); return; }
-
-            let feedbackId = null;
-
-            try {
-                feedbackSubmitBtn.disabled = true; feedbackSubmitBtn.textContent = 'Submitting...';
-
-                // Save to Firestore and get id
-                if (window.fbSubmitFeedback) {
-                    const result = await window.fbSubmitFeedback({ name, rating, comment });
-                    feedbackId = result && result.id;
-                }
-
-                // Trigger backend email notification and update status in Firestore
-                try {
-                    const userEmail = window.firebaseAuth && window.firebaseAuth.currentUser ? window.firebaseAuth.currentUser.email : null;
-                    const backend = 'http://127.0.0.1:5000';
-                    const res = await fetch(`${backend}/api/send-feedback-notification`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, rating, comment, email: userEmail })
-                    });
-                    const j = await res.json().catch(() => null);
-                    const ok = res.ok || (j && j.success);
-                    if (feedbackId && window.fbUpdateFeedbackStatus) {
-                        await window.fbUpdateFeedbackStatus(feedbackId, { emailSent: ok, emailSentAt: ok ? new Date().toISOString() : null });
-                    }
-                    if (!ok) console.warn('Email notification failed', j || res.statusText);
-                } catch (e) {
-                    console.warn('Email notification failed', e);
-                    if (feedbackId && window.fbUpdateFeedbackStatus) {
-                        await window.fbUpdateFeedbackStatus(feedbackId, { emailSent: false });
-                    }
-                }
-
-                // Refresh list
-                await loadFeedback();
-
-                // Clear form
-                if (feedbackName) feedbackName.value = '';
-                if (feedbackRating) feedbackRating.value = '0';
-                if (feedbackComment) feedbackComment.value = '';
-                const ratingText = document.getElementById('rating-text'); if (ratingText) ratingText.textContent = 'Select a rating';
-
-                showModal('Thank you for your feedback!');
-            } catch (e) {
-                console.error('Submit feedback error', e);
-                showModal('Failed to submit feedback.');
-            } finally {
-                feedbackSubmitBtn.disabled = false; feedbackSubmitBtn.textContent = 'Submit Feedback';
-            }
-        });
-    }
-
-    // If on feedback page, load feedback on startup
-    if (document.getElementById('feedback-list')) {
-        loadFeedback();
-    }
+    // --- End of DOMContentLoaded ---
 });
+

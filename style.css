@@ -1690,3 +1690,10 @@ body.dark-mode .empty-state h3 {
 body.dark-mode .empty-state p {
     color: #888 !important;
 }
+
+/* Fix for bullet point visibility in editor */
+.rich-text-area ul,
+.rich-text-area ol {
+    padding-left: 25px !important;
+    margin-left: 10px !important;
+}

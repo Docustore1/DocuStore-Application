@@ -156,16 +156,21 @@ def send_feedback_notification():
     if not all([name, rating, comment]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    # If no email provided, just return success (feedback saved to Firebase)
-    if not email:
-        return jsonify({"success": True, "message": "Feedback saved"}), 200
+    # If no email provided, we still proceed to send Admin notification (for the Review List)
     
-    # Thank you email to user
-    subject = "Thank You for Your Feedback - MS College Document Store"
-    body = f"""
+    results = []
+
+    # 1. Send Thank You email to User (if email exists)
+    if email:
+        subject = "Thank You for Your Feedback - MS College Document Store"
+        # ... (Body definitions skipped for brevity, they are already in the file or I can keep them if I don't overwrite) ...
+        # Actually I need to construct the bodies if I'm replacing the block. 
+        # Let's assume the previous replacement content definition.
+        
+        body = f"""
 Dear {name},
 
-Thank you for taking the time to share your feedback with MS College Document Store!
+Thank you for sharing your feedback with MS College Document Store!
 
 Your {rating}-star rating and comments help us improve our service.
 
@@ -177,53 +182,50 @@ We appreciate your input!
 Best regards,
 MS College Team
 """
-    
-    html_body = f"""
-    <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%); padding: 30px; text-align: center;">
-                <h1 style="color: white; margin: 0;">Thank You!</h1>
-            </div>
-            
-            <div style="padding: 30px; background: #f9f9f9;">
-                <p>Dear {name},</p>
-                <p>Thank you for taking the time to share your feedback with <strong>MS College Document Store</strong>!</p>
-                
-                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                    <div style="font-size: 32px; color: #ffa500; margin-bottom: 10px;">
-                        {'⭐' * int(rating)}
-                    </div>
-                    <p style="font-style: italic; color: #555; margin: 15px 0;">
-                        "{comment}"
-                    </p>
+        
+        html_body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">Feedback Received</h1>
                 </div>
                 
-                <p>Your feedback helps us improve our service!</p>
+                <div style="padding: 30px; background: #f9f9f9;">
+                    <p>Dear {name},</p>
+                    <p>Thank you for sharing your feedback with <strong>MS College Document Store</strong>.</p>
+                    <p>We appreciate your input and will use it to improve our service.</p>
+                    
+                    <div style="background: white; padding: 20px; border-left: 4px solid #ff8c00; margin: 20px 0; border-radius: 4px;">
+                        <p style="margin: 0 0 10px 0;"><strong>Rating:</strong> {rating} / 5</p>
+                        <p style="margin: 0 0 10px 0;"><strong>Comment:</strong></p>
+                        <p style="margin: 0; color: #555;">{comment}</p>
+                        <p style="margin: 15px 0 0 0; font-size: 12px; color: #999;">
+                            Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                        </p>
+                    </div>
+                    
+                    <p>Best regards,<br/>
+                    <strong>MS College Team</strong></p>
+                </div>
                 
-                <p>Best regards,<br/>
-                <strong>MS College Team</strong></p>
-            </div>
-            
-            <div style="background: #333; padding: 20px; text-align: center; color: #999; font-size: 12px;">
-                <p>This is an automated thank you email from MS College Document Store</p>
-            </div>
-        </body>
-    </html>
-    """
-    
-    # Send to user
-    results = []
-    try:
-        sent_user, err_user = send_email(email, subject, body, html_body)
-        results.append({"to": email, "sent": sent_user, "error": err_user})
-    except Exception as e:
-        results.append({"to": email, "sent": False, "error": str(e)})
+                <div style="background: #333; padding: 20px; text-align: center; color: #999; font-size: 12px;">
+                    <p>This is an automated confirmation email from MS College Document Store</p>
+                </div>
+            </body>
+        </html>
+        """
+        
+        try:
+            sent_user, err_user = send_email(email, subject, body, html_body)
+            results.append({"to": email, "sent": sent_user, "error": err_user})
+        except Exception as e:
+            results.append({"to": email, "sent": False, "error": str(e)})
 
-    # Send admin copy to SMTP_EMAIL (owner)
+    # 2. Send Admin Copy (ALWAYS)
     try:
-        admin_subject = f"New Feedback Received - {name or 'Anonymous'}"
+        admin_subject = f"Feedback - {name or 'Anonymous'}" # Keep "Feedback" in subject for the search tool
         admin_body = f"Feedback received from {name or 'Anonymous'} ({email or 'no email provided'}).\n\nRating: {rating}\n\nComment:\n{comment}\n\nSubmitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        admin_html = f"<html><body><h2>New Feedback Received</h2><p><strong>From:</strong> {escape(email or 'Anonymous')}</p><p><strong>Rating:</strong> {rating}</p><p><strong>Comment:</strong><br/>{escape(comment)}</p><p style=\"color:#999;\">Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p></body></html>"
+        admin_html = f"<html><body><h2>New Feedback Received</h2><p><strong>From:</strong> {escape(name)} ({escape(email or 'No Email')})</p><p><strong>Rating:</strong> {rating}</p><p><strong>Comment:</strong><br/>{escape(comment)}</p><p style=\"color:#999;\">Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p></body></html>"
         sent_admin, err_admin = send_email(SMTP_EMAIL, admin_subject, admin_body, admin_html)
         results.append({"to": SMTP_EMAIL, "sent": sent_admin, "error": err_admin})
     except Exception as e:
