@@ -107,20 +107,20 @@ document.addEventListener('DOMContentLoaded', () => {
         authBtn.addEventListener('click', async () => {
             const email = emailInput.value.trim();
             const password = passInput.value;
-            
+
             // Validation
-            if (!email || !password) { 
-                showModal("Please enter email and password."); 
-                return; 
+            if (!email || !password) {
+                showModal("Please enter email and password.");
+                return;
             }
-            
+
             // Email format validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
                 showModal("Please enter a valid email address (e.g., user@example.com)");
                 return;
             }
-            
+
             // Password validation
             if (password.length < 6) {
                 showModal("Password must be at least 6 characters long.");
@@ -129,12 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 authBtn.disabled = true; authBtn.textContent = "Processing...";
-                if (isSignupMode) { 
-                    await window.fbSignUp(email, password); 
-                    showModal("Account created! Please complete your profile."); 
+                if (isSignupMode) {
+                    await window.fbSignUp(email, password);
+                    showModal("Account created! Please complete your profile.");
                 }
-                else { 
-                    await window.fbSignIn(email, password); 
+                else {
+                    await window.fbSignIn(email, password);
                 }
             } catch (err) {
                 let errorMsg = err.message;
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (errorMsg.includes('auth/wrong-password')) errorMsg = "Incorrect password.";
                 else if (errorMsg.includes('auth/email-already-in-use')) errorMsg = "Email already in use.";
                 else if (errorMsg.includes('auth/weak-password')) errorMsg = "Password is too weak (min 6 characters).";
-                
+
                 showModal("Auth Failed: " + errorMsg);
                 authBtn.disabled = false; authBtn.textContent = isSignupMode ? "Create Account" : "Login";
             }
@@ -1719,13 +1719,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const stars = '★'.repeat(Number(f.rating || 0)) + '☆'.repeat(5 - Number(f.rating || 0));
             const date = f.createdAt ? new Date(f.createdAt).toLocaleString() : '';
             return `
-                <div class="file-item">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="font-weight:700;">${escapeHtml(f.name || 'Anonymous')}</div>
-                        <div style="color:#ffa500;">${stars}</div>
+                <div class="feedback-card">
+                    <div class="meta">
+                        <div class="author">${escapeHtml(f.name || 'Anonymous')}</div>
+                        <div class="rating">${stars}</div>
                     </div>
-                    <div style="margin-top:8px; color:#555;">${escapeHtml(f.comment || '')}</div>
-                    <div style="text-align:right; font-size:0.85rem; color:#999; margin-top:8px;">${date}</div>
+                    <div class="comment">${escapeHtml(f.comment || '')}</div>
+                    <div class="time">${date}</div>
                 </div>`;
         }).join('');
     }

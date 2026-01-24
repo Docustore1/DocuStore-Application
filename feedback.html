@@ -11,23 +11,24 @@
 
 <body class="store-page">
     <!-- Top Left Nav -->
-        <a href="store.html" class="top-left-nav">
-            ← Back to Home
-        </a>
+
 
     <!-- Top Nav -->
-    <div class="footer-links">
-        <a href="feedback.html" id="link-feedback" class="active-link">Feedback</a>
-        <a href="support.html" id="link-support">Support</a>
-    </div>
+
 
     <div class="store-container">
         <header class="store-header" style="justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+                <a href="store.html" class="header-back-btn">← Back to Home</a>
                 <img src="logo.png" alt="Logo" class="app-logo-small">
                 <h2>User Feedback</h2>
             </div>
-            <div class="header-actions">
+            <div class="header-actions" style="display: flex; align-items: center; gap: 15px;">
+                <div class="top-links" style="font-size: 0.95rem; font-weight: 600;">
+                    <a href="feedback.html" id="link-feedback" class="active-link"
+                        style="text-decoration: none; color: inherit; margin-right: 15px;">Feedback</a>
+                    <a href="support.html" id="link-support" style="text-decoration: none; color: inherit;">Support</a>
+                </div>
                 <button id="btn-theme-toggle" class="icon-btn" title="Toggle Dark Mode">🌙</button>
             </div>
         </header>
