@@ -1299,27 +1299,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Trigger backend support email (don't block on failure)
+                let emailSent = true;
+                let emailError = "";
                 try {
                     const resp = await fetch(`${BACKEND_URL}/api/send-support-email`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, type, desc })
                     });
                     const j = await resp.json().catch(() => null);
-                    const ok = resp.ok || (j && j.success);
-
-                    if (ticketId && window.fbUpdateTicketStatus) {
-                        await window.fbUpdateTicketStatus(ticketId, { emailSent: ok, emailSentAt: ok ? new Date().toISOString() : null });
+                    emailSent = resp.ok || (j && j.success);
+                    if (!emailSent) {
+                        emailError = j?.error || j?.message || resp.statusText;
                     }
 
-                    if (!ok) console.warn('Support email failed', j || resp.statusText);
+                    if (ticketId && window.fbUpdateTicketStatus) {
+                        await window.fbUpdateTicketStatus(ticketId, { emailSent: emailSent, emailSentAt: emailSent ? new Date().toISOString() : null });
+                    }
                 } catch (e) {
+                    emailSent = false;
+                    emailError = "Backend unreachable";
                     console.warn('Support email failed (backend may be offline)', e);
                     if (ticketId && window.fbUpdateTicketStatus) {
                         await window.fbUpdateTicketStatus(ticketId, { emailSent: false });
                     }
                 }
 
-                showModal("Ticket submitted! We will contact you soon.");
+                if (emailSent) {
+                    showModal("Ticket submitted! We will contact you soon.");
+                } else {
+                    showModal(`Ticket Saved Locally, but Email Failed: ${emailError}. Please check backend logs.`);
+                }
                 document.getElementById('support-email').value = '';
                 document.getElementById('support-desc').value = '';
                 loadTickets();
