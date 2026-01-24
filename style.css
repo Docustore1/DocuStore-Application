@@ -1750,3 +1750,130 @@ body.dark-mode .preview-body td {
 body.dark-mode table {
     border-color: #555 !important;
 }
+
+/* --- Feedback and Support Page Styles --- */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #444;
+}
+
+body.dark-mode .form-group label {
+    color: #ccc;
+}
+
+.form-group textarea.input-field {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Active link styling for navigation */
+.active-link {
+    color: var(--primary-orange) !important;
+    border-bottom: 2px solid var(--primary-orange);
+    padding-bottom: 2px;
+}
+
+/* --- Mobile Responsive Styles for Feedback/Support --- */
+@media (max-width: 600px) {
+
+    /* Header adjustments for feedback/support pages */
+    .store-header .header-left {
+        flex-wrap: wrap;
+        gap: 8px !important;
+    }
+
+    .store-header .header-left .header-back-btn {
+        order: -1;
+        width: 100%;
+        text-align: center;
+        margin-bottom: 5px;
+    }
+
+    .store-header .header-actions {
+        flex-wrap: wrap;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+
+    .store-header .top-links {
+        display: flex;
+        gap: 15px;
+        font-size: 0.85rem !important;
+    }
+
+    .store-header .top-links a {
+        margin-right: 0 !important;
+    }
+
+    /* Form improvements for mobile */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        font-size: 0.9rem;
+    }
+
+    .form-group textarea.input-field {
+        min-height: 100px;
+    }
+
+    /* Star rating responsive sizing */
+    .star-rating {
+        gap: 0.4rem !important;
+        font-size: 1.6rem !important;
+    }
+
+    /* Submit button full width on mobile */
+    .content-section .btn.primary {
+        width: 100%;
+        padding: 14px;
+        font-size: 1rem;
+    }
+
+    /* Feedback cards styling for mobile */
+    .feedback-card {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    .feedback-card .meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* Extra small screens */
+    .store-header h2 {
+        font-size: 1rem !important;
+        text-align: center;
+        width: 100%;
+    }
+
+    .app-logo-small {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .star-rating {
+        font-size: 1.4rem !important;
+    }
+
+    .tabs {
+        gap: 0;
+    }
+
+    .tab-btn {
+        padding: 0.7rem 0.5rem !important;
+        font-size: 0.85rem !important;
+    }
+}
