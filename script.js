@@ -1324,14 +1324,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                // UI: Switch to Support View tab IMMEDIATELY
+                const supportTabBtn = document.querySelector('.tab-btn[data-tab="support-view"]');
+                if (supportTabBtn) supportTabBtn.click();
+                loadTickets();
+
                 if (emailSent) {
                     showModal("Ticket submitted! We will contact you soon.");
                 } else {
-                    showModal(`Ticket Saved Locally, but Email Failed: ${emailError}. Please check backend logs.`);
+                    showModal(`Ticket Received! (Note: notification email failed, but your ticket is recorded).`);
                 }
                 document.getElementById('support-email').value = '';
                 document.getElementById('support-desc').value = '';
-                loadTickets();
             } catch (e) {
                 console.error(e);
                 showModal("Error submitting ticket.");
@@ -1397,6 +1401,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 storedFeedback.unshift(feedbackData);
                 localStorage.setItem('docStore_feedback', JSON.stringify(storedFeedback));
 
+                // NEW: Save to Firebase for reliable sync
+                let feedbackId = null;
+                if (window.fbSubmitFeedback) {
+                    try {
+                        const res = await window.fbSubmitFeedback(feedbackData);
+                        feedbackId = res && res.id;
+                    } catch (e) {
+                        console.warn("Firebase save failed:", e);
+                    }
+                }
+
+                // UI: Switch to Review tab IMMEDIATELY
+                const reviewTabBtn = document.querySelector('.tab-btn[data-tab="review-feedback"]');
+                if (reviewTabBtn) reviewTabBtn.click();
+                loadFeedback();
+
                 // Try to send to Backend (SMTP) - don't block on failure
                 let emailSent = true;
                 let emailError = "";
@@ -1421,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (emailSent) {
                     showModal("Feedback Sent! Thank you.");
                 } else {
-                    showModal(`Feedback Saved Locally, but Email Failed: ${emailError}. Please check backend logs.`);
+                    showModal(`Feedback Received! (Note: notification email failed, but your review is recorded).`);
                 }
                 // Clear form
                 document.getElementById('feedback-name').value = '';
@@ -1431,11 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('feedback-rating').value = '0';
                 document.getElementById('rating-text').textContent = 'Select a rating';
 
-                // Automatically switch to Feedback Review tab
-                const reviewTabBtn = document.querySelector('.tab-btn[data-tab="review-feedback"]');
-                if (reviewTabBtn) reviewTabBtn.click();
 
-                loadFeedback(); // Refresh list
             } catch (e) {
                 console.error(e);
                 showModal("Error submitting feedback.");
@@ -1459,27 +1475,43 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!feedbackList) return;
         feedbackList.innerHTML = '<div style="text-align:center;">Loading reviews...</div>';
 
-        // Get feedback from localStorage
-        const storedFeedback = JSON.parse(localStorage.getItem('docStore_feedback') || '[]');
+        // Get feedback from localStorage (for immediate display)
+        const localFeedback = JSON.parse(localStorage.getItem('docStore_feedback') || '[]');
 
-        // Also try to get feedback from email backend
-        let emailFeedback = [];
-        try {
-            emailFeedback = await fetchEmailsFromBackend("Feedback");
-        } catch (e) {
-            console.warn("Could not fetch feedback from email backend:", e);
+        // Also try to get feedback from Firebase
+        let firebaseFeedback = [];
+        if (window.fbFetchFeedback) {
+            try {
+                firebaseFeedback = await window.fbFetchFeedback();
+            } catch (e) {
+                console.warn("Could not fetch feedback from Firebase:", e);
+            }
         }
+
+        // Merge and de-duplicate (prefer Firebase if ID matches)
+        const allFeedbackMap = new Map();
+        firebaseFeedback.forEach(fb => allFeedbackMap.set(fb.id || fb.submittedAt, fb));
+        localFeedback.forEach(fb => {
+            const id = fb.id || fb.submittedAt;
+            if (!allFeedbackMap.has(id)) allFeedbackMap.set(id, fb);
+        });
+
+        const mergedFeedback = Array.from(allFeedbackMap.values())
+            .sort((a, b) => new Date(b.submittedAt || b.createdAt) - new Date(a.submittedAt || a.createdAt));
 
         feedbackList.innerHTML = '';
 
-        // Display locally stored feedback first
-        if (storedFeedback.length > 0) {
-            storedFeedback.forEach(fb => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                const date = fb.submittedAt ? new Date(fb.submittedAt).toLocaleString() : 'Unknown';
-                const stars = '⭐'.repeat(parseInt(fb.rating) || 0);
-                item.innerHTML = `
+        if (mergedFeedback.length === 0) {
+            feedbackList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No feedback found.</div>';
+            return;
+        }
+
+        mergedFeedback.forEach(fb => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            const date = fb.submittedAt ? new Date(fb.submittedAt).toLocaleString() : 'Unknown';
+            const stars = '⭐'.repeat(parseInt(fb.rating) || 0);
+            item.innerHTML = `
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: var(--primary-orange);">💬 ${fb.name}</div>
                         <div style="font-size: 1rem; margin-top: 4px;">${stars} (${fb.rating}/5)</div>
@@ -1488,107 +1520,65 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <button class="btn-action delete-feedback" data-id="${fb.id}" title="Delete" style="color: red;">❌</button>
                 `;
-                feedbackList.appendChild(item);
+            feedbackList.appendChild(item);
 
-                // Add delete handler
-                item.querySelector('.delete-feedback').addEventListener('click', () => {
-                    const fbs = JSON.parse(localStorage.getItem('docStore_feedback') || '[]');
-                    const updated = fbs.filter(f => f.id !== fb.id);
-                    localStorage.setItem('docStore_feedback', JSON.stringify(updated));
-                    loadFeedback(); // Refresh
-                });
+            // Add delete handler
+            item.querySelector('.delete-feedback').addEventListener('click', () => {
+                const fbs = JSON.parse(localStorage.getItem('docStore_feedback') || '[]');
+                const updated = fbs.filter(f => f.id !== fb.id);
+                localStorage.setItem('docStore_feedback', JSON.stringify(updated));
+                loadFeedback(); // Refresh
             });
-        }
-
-        // Also display email-based feedback if any
-        if (emailFeedback.length > 0) {
-            emailFeedback.forEach(email => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.innerHTML = `
-                    <div>
-                        <div style="font-weight: 600;">${email.subject}</div>
-                        <div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${email.snippet}</div>
-                        <div style="font-size: 0.8rem; color: #999; margin-top: 8px;">From: ${email.from} | ${email.date}</div>
-                    </div>
-                `;
-                feedbackList.appendChild(item);
-            });
-        }
-
-        // Show empty state if no feedback
-        if (storedFeedback.length === 0 && emailFeedback.length === 0) {
-            feedbackList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No feedback submitted yet.</div>';
-        }
+        });
     }
 
     async function loadTickets() {
         const ticketList = document.getElementById('ticket-list');
         if (!ticketList) return;
-
         ticketList.innerHTML = '<div style="text-align:center;">Loading tickets...</div>';
 
-        // Get tickets from localStorage
-        const storedTickets = JSON.parse(localStorage.getItem('docStore_tickets') || '[]');
-
-        // Also try to get tickets from email backend (optional enhancement)
-        let emailTickets = [];
-        try {
-            emailTickets = await fetchEmailsFromBackend("Support");
-        } catch (e) {
-            console.warn("Could not fetch tickets from email backend:", e);
+        const localTickets = JSON.parse(localStorage.getItem('docStore_tickets') || '[]');
+        let firebaseTickets = [];
+        if (window.fbFetchTickets) {
+            try { firebaseTickets = await window.fbFetchTickets(); }
+            catch (e) { console.warn("Firebase fetch failed:", e); }
         }
+
+        const allTicketsMap = new Map();
+        firebaseTickets.forEach(t => allTicketsMap.set(t.id || t.submittedAt, t));
+        localTickets.forEach(t => {
+            const id = t.id || t.submittedAt;
+            if (!allTicketsMap.has(id)) allTicketsMap.set(id, t);
+        });
+
+        const mergedTickets = Array.from(allTicketsMap.values())
+            .sort((a, b) => new Date(b.submittedAt || b.createdAt) - new Date(a.submittedAt || a.createdAt));
 
         ticketList.innerHTML = '';
+        if (mergedTickets.length === 0) {
+            ticketList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No support tickets found.</div>';
+            return;
+        }
 
-        // Display locally stored tickets first
-        if (storedTickets.length > 0) {
-            storedTickets.forEach(ticket => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                const date = ticket.submittedAt ? new Date(ticket.submittedAt).toLocaleString() : 'Unknown';
-                item.innerHTML = `
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; color: var(--primary-orange);">🎫 ${ticket.type || 'Support Ticket'}</div>
-                        <div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${ticket.desc}</div>
-                        <div style="font-size: 0.8rem; color: #999; margin-top: 8px;">
-                            📧 ${ticket.email} | 📅 ${date}
-                        </div>
-                    </div>
-                    <button class="btn-action delete-ticket" data-id="${ticket.id}" title="Delete" style="color: red;">❌</button>
-                `;
-                ticketList.appendChild(item);
-
-                // Add delete handler
-                item.querySelector('.delete-ticket').addEventListener('click', () => {
-                    const tickets = JSON.parse(localStorage.getItem('docStore_tickets') || '[]');
-                    const updated = tickets.filter(t => t.id !== ticket.id);
-                    localStorage.setItem('docStore_tickets', JSON.stringify(updated));
-                    loadTickets(); // Refresh
-                });
+        mergedTickets.forEach(ticket => {
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            const date = ticket.submittedAt ? new Date(ticket.submittedAt).toLocaleString() : 'Unknown';
+            item.innerHTML = `
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: var(--primary-orange);">🎫 ${ticket.type || 'Support Ticket'}</div>
+                    <div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${ticket.desc}</div>
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 8px;">📧 ${ticket.email} | 📅 ${date}</div>
+                </div>
+                <button class="btn-action delete-ticket" data-id="${ticket.id}" title="Delete" style="color: red;">❌</button>
+            `;
+            ticketList.appendChild(item);
+            item.querySelector('.delete-ticket').addEventListener('click', () => {
+                const tickets = JSON.parse(localStorage.getItem('docStore_tickets') || '[]');
+                localStorage.setItem('docStore_tickets', JSON.stringify(tickets.filter(t => t.id !== ticket.id)));
+                loadTickets();
             });
-        }
-
-        // Also display email-based tickets if any (from backend)
-        if (emailTickets.length > 0) {
-            emailTickets.forEach(email => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.innerHTML = `
-                    <div>
-                        <div style="font-weight: 600;">${email.subject}</div>
-                        <div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${email.snippet}</div>
-                        <div style="font-size: 0.8rem; color: #999; margin-top: 8px;">From: ${email.from} | ${email.date}</div>
-                    </div>
-                `;
-                ticketList.appendChild(item);
-            });
-        }
-
-        // Show empty state if no tickets
-        if (storedTickets.length === 0 && emailTickets.length === 0) {
-            ticketList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No support tickets submitted yet.</div>';
-        }
+        });
     }
 
 
