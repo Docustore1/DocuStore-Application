@@ -32,8 +32,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userEmailDisp = document.getElementById('user-email-display');
                 if (userEmailDisp) userEmailDisp.textContent = user.email;
 
+                // Debug: Log user info
+                console.log("🔑 User ID:", user.uid);
+                console.log("📧 Email:", user.email);
+
+                // Load and display user profile
+                if (typeof window.fbLoadSettings === 'function') {
+                    window.fbLoadSettings().then(settings => {
+                        if (settings && settings.collegeName) {
+                            localStorage.setItem('docStore_collegeName', settings.collegeName);
+                            localStorage.setItem('docStore_userName', settings.userName || '');
+                            localStorage.setItem('docStore_userRole', settings.userRole || '');
+                            const nameDisplay = document.getElementById('college-name-display');
+                            if (nameDisplay) nameDisplay.textContent = settings.collegeName;
+                        }
+                    }).catch(err => console.error("Profile load error:", err));
+                }
+
                 // Load data for store display
-                loadProfile();
                 loadFilesFromDB();
                 if (document.getElementById('feedback-list')) loadFeedback();
                 if (document.getElementById('ticket-list')) loadTickets();
