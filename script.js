@@ -11,13 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!window.fbOnAuthStateChanged) return;
 
         window.fbOnAuthStateChanged(async (user) => {
-            const logoutBtn = document.getElementById('btn-logout');
-            
             if (user) {
                 console.log("👤 User Logged In:", user.email);
-                
-                // Show logout button when user is logged in
-                if (logoutBtn) logoutBtn.style.display = 'block';
 
                 // If on entry page, check if profile exists
                 if (window.location.pathname.endsWith('entry.html') || window.location.pathname.endsWith('index.html')) {
@@ -61,10 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } else {
                 console.log("👤 No user logged in.");
-                
-                // Hide logout button when user is not logged in
-                if (logoutBtn) logoutBtn.style.display = 'none';
-                
                 // Protected route protection: Redirect to entry
                 if (window.location.pathname.endsWith('store.html') ||
                     window.location.pathname.endsWith('feedback.html') ||
@@ -88,30 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     waitForBridge();
-
-    // --- Logout Button Handler ---
-    const logoutBtn = document.getElementById('btn-logout');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                logoutBtn.disabled = true;
-                logoutBtn.textContent = "Logging out...";
-                await window.fbSignOut();
-                console.log("✅ User Logged Out Successfully");
-                // Clear local storage
-                localStorage.removeItem('docStore_collegeName');
-                localStorage.removeItem('docStore_userName');
-                localStorage.removeItem('docStore_userRole');
-                // Redirect to entry page
-                window.location.href = 'entry.html';
-            } catch (err) {
-                console.error("❌ Logout Failed:", err);
-                logoutBtn.disabled = false;
-                logoutBtn.textContent = "Logout";
-                showModal("Logout failed: " + err.message);
-            }
-        });
-    }
 
     // --- Auth UI Interaction (entry.html) ---
     const authTitle = document.getElementById('auth-title');
@@ -210,6 +177,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Header Actions ---
         const btnLogout = document.getElementById('btn-logout');
         const btnSettings = document.getElementById('btn-settings');
+
+        if (btnLogout) {
+            btnLogout.addEventListener('click', async () => {
+                try {
+                    await window.fbSignOut();
+                    localStorage.clear();
+                    window.location.href = 'entry.html';
+                } catch (err) {
+                    showModal("Logout Failed: " + err.message);
+                }
+            });
+        }
 
         if (btnSettings) {
             btnSettings.addEventListener('click', () => {
