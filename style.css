@@ -1253,3 +1253,69 @@ body.dark-mode .preview-body .page {
     border: 1px solid #ccc;
     padding: 8px;
 }
+
+/* Mobile Feedback/Support Page Fixes */
+@media (max-width: 600px) {
+    .top-left-nav {
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        z-index: auto !important;
+        margin-bottom: 15px !important;
+        width: auto !important;
+        display: inline-block !important;
+    }
+
+    .footer-links {
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        width: 100% !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 1rem !important;
+        padding: 1rem 0 !important;
+        z-index: 10 !important;
+    }
+
+    .footer-links a {
+        font-size: 0.85rem !important;
+        padding: 6px 12px !important;
+    }
+
+    .footer-links a.active-link {
+        padding: 6px 12px !important;
+        font-size: 0.85rem !important;
+    }
+
+    .store-container {
+        margin-top: 10px !important;
+    }
+
+    .content-section {
+        padding: 1rem !important;
+    }
+
+    .star-rating {
+        font-size: 1.5rem !important;
+        gap: 0.3rem !important;
+    }
+
+    .form-group label {
+        font-size: 0.95rem !important;
+    }
+
+    .input-field {
+        font-size: 0.95rem !important;
+        padding: 10px 12px !important;
+    }
+
+    textarea.input-field {
+        min-height: 80px !important;
+    }
+
+    .btn {
+        padding: 10px 20px !important;
+        font-size: 0.95rem !important;
+    }
+}
