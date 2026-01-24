@@ -798,6 +798,88 @@ body.dark-mode .rich-text-toolbar {
     border-color: #444;
 }
 
+
+/* Mobile Responsive Overrides */
+@media (max-width: 600px) {
+    .store-container {
+        padding: 0.75rem 0.5rem;
+        min-height: 100vh;
+    }
+
+    .store-header {
+        padding: 0.75rem 1rem;
+        gap: 8px;
+    }
+
+    .app-logo-small, .store-logo {
+        width: 48px;
+        height: 48px;
+    }
+
+    .tabs { flex-wrap: wrap; }
+    .tab-btn { font-size: 1rem; padding: 0.6rem; }
+
+    .content-section { padding: 1rem; }
+
+    .top-left-nav {
+        top: 0.9rem;
+        left: 0.6rem;
+        font-size: 0.95rem;
+        padding: 6px 10px;
+        background: rgba(255,255,255,0.85);
+    }
+
+    /* Move footer-links out of absolute positioning on small screens to avoid overlap */
+    .footer-links {
+        position: static;
+        margin: 0.5rem 0 0 0;
+        display: flex;
+        justify-content: center;
+        gap: 0.6rem;
+        font-size: 0.95rem;
+        background: transparent;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .footer-links a.active-link { padding: 6px 12px; }
+
+    .star-rating { font-size: 1.6rem; gap: 0.4rem; }
+    .star-rating .star { padding: 8px; border-radius: 6px; }
+
+    .input-field { padding: 14px; font-size: 1rem; border-radius: 10px; }
+    textarea.input-field { min-height: 120px; }
+
+    /* Make primary buttons full width and easy to tap */
+    .store-container .btn.primary {
+        width: calc(100% - 2rem);
+        margin: 0 1rem;
+        padding: 14px 18px;
+        border-radius: 28px;
+        font-size: 1.03rem;
+    }
+
+    .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .file-icon { font-size: 1.8rem; }
+
+    /* Modal adjustments */
+    .modal-box { width: 95%; max-width: 420px; padding: 1.25rem; }
+
+    /* Reduce gutters for a tighter mobile layout */
+    .drop-zone { padding: 2rem; }
+}
+
+@media (max-width: 400px) {
+    .top-left-nav { font-size: 0.9rem; padding: 6px 8px; }
+    .star-rating { font-size: 1.4rem; }
+    .store-container .btn.primary { width: calc(100% - 1.5rem); margin: 0 0.75rem; }
+}
+
 /* Feedback card styles (user-friendly view) */
 .feedback-card {
     background: #fff;
