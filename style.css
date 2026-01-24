@@ -867,6 +867,21 @@ body.dark-mode .rich-text-toolbar {
         text-indent: -9999px; /* hide text but keep accessible */
     }
 
+    /* Show label for the active footer button (icon + text) */
+    .footer-links a.active-link {
+        text-indent: 0;
+        width: auto;
+        height: auto;
+        padding: 10px 14px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Ensure icon and text align when active */
+    .footer-links a.active-link::before { margin-right: 6px; }
+
     /* Add emoji icons before each link (keeps HTML unchanged) */
     #link-feedback::before { content: "📝"; font-size: 1.3rem; display: inline-block; }
     #link-support::before { content: "🛠️"; font-size: 1.2rem; display: inline-block; }
@@ -887,6 +902,8 @@ body.dark-mode .rich-text-toolbar {
     .btn { padding: 12px 18px; font-size: 1rem; border-radius: 30px; }
 
     .file-list { padding-bottom: 6rem; }
+    /* Ensure all content has bottom space so footer doesn't overlap inputs */
+    .content-section { padding-bottom: 8rem; }
 }
 
 /* Extra small devices */
