@@ -52,7 +52,12 @@ def send_email(to_email, subject, body, html_body=None):
             server.set_debuglevel(1)
 
         try:
-            print(f"Logging in as {SMTP_EMAIL}...")
+            # Masked logging for verification on Render
+            masked_email = f"{SMTP_EMAIL[:3]}...{SMTP_EMAIL[-3:]}" if len(SMTP_EMAIL) > 6 else "***"
+            masked_pass = f"{SMTP_PASSWORD[:2]}...{SMTP_PASSWORD[-2:]}" if len(SMTP_PASSWORD) > 4 else "***"
+            print(f"Logging in as {masked_email} (Length: {len(SMTP_EMAIL)})")
+            print(f"Using password starting with '{SMTP_PASSWORD[:2]}...' (Length: {len(SMTP_PASSWORD)})")
+            
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             print("Login successful. Sending email...")
             server.sendmail(SMTP_EMAIL, to_email, msg.as_string())

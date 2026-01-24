@@ -1389,6 +1389,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('docStore_feedback', JSON.stringify(storedFeedback));
 
                 // Try to send to Backend (SMTP) - don't block on failure
+                let emailSent = true;
+                let emailError = "";
                 try {
                     const resp = await fetch(`${BACKEND_URL}/api/send-feedback-notification`, {
                         method: 'POST',
@@ -1397,13 +1399,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     const j = await resp.json().catch(() => null);
                     if (!resp.ok) {
-                        console.warn("Feedback email failed:", j?.message || resp.statusText);
+                        emailSent = false;
+                        emailError = j?.error || j?.message || resp.statusText;
+                        console.warn("Feedback email failed:", emailError);
                     }
                 } catch (e) {
+                    emailSent = false;
+                    emailError = "Backend unreachable";
                     console.warn('Feedback email failed (backend may be offline)', e);
                 }
 
-                showModal("Feedback Sent! Thank you.");
+                if (emailSent) {
+                    showModal("Feedback Sent! Thank you.");
+                } else {
+                    showModal(`Feedback Saved Locally, but Email Failed: ${emailError}. Please check backend logs.`);
+                }
                 // Clear form
                 document.getElementById('feedback-name').value = '';
                 document.getElementById('feedback-comment').value = '';
