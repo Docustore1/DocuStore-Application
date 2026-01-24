@@ -79,14 +79,16 @@ def send_support_email():
     """Send support ticket confirmation email to user"""
     data = request.json
     
-    email = data.get('email')
+    user_email = data.get('email')
     ticket_type = data.get('type')
     description = data.get('desc')
     
-    if not all([email, ticket_type, description]):
+    if not all([user_email, ticket_type, description]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    # Confirmation email to user
+    results = []
+    
+    # 1. Confirmation email to user
     subject = "Support Ticket Received - MS College Document Store"
     body = f"""
 Dear User,
@@ -136,12 +138,27 @@ MS College Support Team
     </html>
     """
     
-    sent, err = send_email(email, subject, body, html_body)
+    try:
+        sent_user, err_user = send_email(user_email, subject, body, html_body)
+        results.append({"to": user_email, "sent": sent_user, "error": err_user})
+    except Exception as e:
+        results.append({"to": user_email, "sent": False, "error": str(e)})
+    
+    # 2. Send Admin Copy (so it appears in Support View via email search)
+    try:
+        admin_subject = f"Support Ticket - {ticket_type}" # Keep "Support" in subject for the search tool
+        admin_body = f"Support ticket received from {user_email}.\n\nType: {ticket_type}\n\nDescription:\n{description}\n\nSubmitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        admin_html = f"<html><body><h2>New Support Ticket</h2><p><strong>From:</strong> {escape(user_email)}</p><p><strong>Type:</strong> {escape(ticket_type)}</p><p><strong>Description:</strong><br/>{escape(description)}</p><p style=\"color:#999;\">Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p></body></html>"
+        sent_admin, err_admin = send_email(SMTP_EMAIL, admin_subject, admin_body, admin_html)
+        results.append({"to": SMTP_EMAIL, "sent": sent_admin, "error": err_admin})
+    except Exception as e:
+        results.append({"to": SMTP_EMAIL, "sent": False, "error": str(e)})
 
-    if sent:
-        return jsonify({"success": True, "message": "Confirmation email sent"}), 200
+    ok = any(r.get('sent') for r in results)
+    if ok:
+        return jsonify({"success": True, "message": "Confirmation email sent", "results": results}), 200
     else:
-        return jsonify({"success": False, "message": "Failed to send email", "error": err}), 500
+        return jsonify({"success": False, "message": "Failed to send email", "results": results}), 500
 
 @app.route('/api/send-feedback-notification', methods=['POST'])
 def send_feedback_notification():
