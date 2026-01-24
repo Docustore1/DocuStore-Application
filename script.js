@@ -3,6 +3,11 @@ let allFilesData = [];
 let currentFolderId = 'root';
 let folderHistory = [];
 
+// Backend URL configuration - auto-detect environment
+const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:5000'
+    : 'https://docustore-backend.onrender.com'; // Update this with your deployed backend URL
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- Firebase Bridge Initialization ---
@@ -1284,8 +1289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Trigger backend support email
                 try {
-                    const backend = 'http://127.0.0.1:5000';
-                    const resp = await fetch(`${backend}/api/send-support-email`, {
+                    const resp = await fetch(`${BACKEND_URL}/api/send-support-email`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, type, desc })
                     });
@@ -1359,8 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 // 1. Send to Backend (SMTP)
-                const backend = 'http://127.0.0.1:5000';
-                const resp = await fetch(`${backend}/api/send-feedback-notification`, {
+                const resp = await fetch(`${BACKEND_URL}/api/send-feedback-notification`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, rating, comment, email })
@@ -1387,8 +1390,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper to fetch emails
     async function fetchEmailsFromBackend(subject) {
         try {
-            const backend = 'http://127.0.0.1:5000';
-            const resp = await fetch(`${backend}/api/search-emails?subject=${encodeURIComponent(subject)}&max=20`);
+            const resp = await fetch(`${BACKEND_URL}/api/search-emails?subject=${encodeURIComponent(subject)}&max=20`);
             const data = await resp.json();
             return data.emails || [];
         } catch (e) {
