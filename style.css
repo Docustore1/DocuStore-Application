@@ -19,6 +19,28 @@ body {
     min-height: 100vh;
 }
 
+/* Floating Action Button (Theme Toggle) */
+.floating-fab {
+    background-color: var(--light-bg);
+    color: var(--dark-text);
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    border: none;
+    font-size: 1.2rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.floating-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+}
+
 /* Entry Page Styles */
 .entry-body {
     display: flex;
@@ -734,6 +756,17 @@ textarea.input-field {
 body.dark-mode {
     background: linear-gradient(135deg, #1a1a1a, #333);
     color: #f0f0f0;
+}
+
+/* Dark Mode FAB */
+body.dark-mode .floating-fab {
+    background-color: #333;
+    color: var(--primary-yellow);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .floating-fab:hover {
+    background-color: #444;
 }
 
 body.dark-mode .store-container,
