@@ -927,9 +927,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
 
-        // Click to enter folder
+        // Click to enter folder OR preview file
+        const clickArea = item.querySelector('.file-info-clickable');
         if (fileRecord.isFolder) {
-            const clickArea = item.querySelector('.file-info-clickable');
             clickArea.addEventListener('click', (e) => {
                 e.preventDefault();
                 console.log(`📂 Entering folder: ${fileRecord.name} (${fileRecord.id})`);
@@ -947,6 +947,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Force update
                 renderFileList();
             });
+        } else {
+            // Click on file to preview it (same as clicking View button)
+            clickArea.addEventListener('click', (e) => {
+                e.preventDefault();
+                const viewBtn = item.querySelector('.view');
+                if (viewBtn) viewBtn.click();
+            });
         }
 
         // Actions
@@ -963,11 +970,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isViewable = name.endsWith('.pdf') ||
                     name.endsWith('.txt') ||
                     name.endsWith('.html') ||
+                    name.endsWith('.htm') ||
+                    name.endsWith('.md') ||
+                    name.endsWith('.svg') ||
+                    name.endsWith('.xml') ||
                     name.endsWith('.jpg') ||
                     name.endsWith('.jpeg') ||
                     name.endsWith('.png') ||
                     name.endsWith('.gif') ||
-                    name.endsWith('.webp');
+                    name.endsWith('.webp') ||
+                    name.endsWith('.bmp') ||
+                    name.endsWith('.ico');
 
                 // IMPROVEMENT: Universal In-App Preview for ALL viewable files
                 if (isViewable) {
@@ -975,8 +988,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Handling for Word Documents
-                if (name.endsWith('.docx')) {
+                // Handling for Word Documents (.docx and .doc)
+                if (name.endsWith('.docx') || name.endsWith('.doc')) {
                     showModal("Generating document preview...");
                     const processWordBuffer = (arrayBuffer) => {
                         mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
@@ -1073,13 +1086,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Force Download for everything else
-                const a = document.createElement('a');
-                a.href = fileUrl;
-                a.download = fileRecord.name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                // Fallback: Try to preview as text/HTML for unknown file types
+                // This handles files without extensions or unrecognized types
+                showModal("Loading preview...");
+                fetch(fileUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error("Could not fetch file content.");
+                        return response.text();
+                    })
+                    .then(text => {
+                        closeModal();
+                        // Check if content looks like HTML
+                        if (text.trim().startsWith('<') && (text.includes('<html') || text.includes('<body') || text.includes('<div') || text.includes('<p'))) {
+                            showPreviewModal(fileRecord.name, text, false);
+                        } else {
+                            // Display as plain text with preformatted styling
+                            const escapedText = text
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;');
+                            const formattedContent = `<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Consolas', 'Monaco', monospace; font-size: 14px; line-height: 1.5;">${escapedText}</pre>`;
+                            showPreviewModal(fileRecord.name, formattedContent, false);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Preview Error:", err);
+                        closeModal();
+                        // If can't preview, fall back to download
+                        const a = document.createElement('a');
+                        a.href = fileUrl;
+                        a.download = fileRecord.name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    });
             });
 
             item.querySelector('.download').addEventListener('click', () => {
