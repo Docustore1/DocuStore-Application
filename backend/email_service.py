@@ -76,7 +76,7 @@ def send_email(to_email, subject, body, html_body=None):
 
 @app.route('/api/send-support-email', methods=['POST'])
 def send_support_email():
-    """Send support ticket confirmation email to user"""
+    """Send support ticket notification to admin only"""
     data = request.json
     
     user_email = data.get('email')
@@ -86,173 +86,106 @@ def send_support_email():
     if not all([user_email, ticket_type, description]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    results = []
-    
-    # 1. Confirmation email to user
-    subject = "Support Ticket Received - MS College Document Store"
+    # Send ONLY to Admin (docustorecollegeerp@gmail.com)
+    subject = f"Support Ticket - {ticket_type}"
     body = f"""
-Dear User,
+New Support Ticket Received
 
-Thank you for contacting MS College Document Store support.
-
-We have received your ticket and will review it shortly.
-
-Ticket Details:
+From: {user_email}
 Type: {ticket_type}
-Description: {description}
-Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-Best regards,
-MS College Support Team
+Description:
+{description}
+
+Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
     
     html_body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%); padding: 30px; text-align: center;">
-                <h1 style="color: white; margin: 0;">Support Ticket Received</h1>
+                <h1 style="color: white; margin: 0;">🎫 New Support Ticket</h1>
             </div>
             
             <div style="padding: 30px; background: #f9f9f9;">
-                <p>Dear User,</p>
-                <p>Thank you for contacting <strong>MS College Document Store</strong> support.</p>
-                <p>We have received your ticket and will review it shortly.</p>
-                
                 <div style="background: white; padding: 20px; border-left: 4px solid #ff8c00; margin: 20px 0; border-radius: 4px;">
-                    <p style="margin: 0 0 10px 0;"><strong>Ticket Type:</strong> {ticket_type}</p>
-                    <p style="margin: 0 0 10px 0;"><strong>Description:</strong></p>
-                    <p style="margin: 0; color: #555;">{description}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>📧 From:</strong> {escape(user_email)}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>📋 Type:</strong> {escape(ticket_type)}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>📝 Description:</strong></p>
+                    <p style="margin: 0; color: #555; background: #eee; padding: 15px; border-radius: 4px;">{escape(description)}</p>
                     <p style="margin: 15px 0 0 0; font-size: 12px; color: #999;">
                         Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                     </p>
                 </div>
-                
-                <p>Best regards,<br/>
-                <strong>MS College Support Team</strong></p>
-            </div>
-            
-            <div style="background: #333; padding: 20px; text-align: center; color: #999; font-size: 12px;">
-                <p>This is an automated confirmation email from MS College Document Store</p>
             </div>
         </body>
     </html>
     """
     
-    try:
-        sent_user, err_user = send_email(user_email, subject, body, html_body)
-        results.append({"to": user_email, "sent": sent_user, "error": err_user})
-    except Exception as e:
-        results.append({"to": user_email, "sent": False, "error": str(e)})
+    sent, err = send_email(SMTP_EMAIL, subject, body, html_body)
     
-    # 2. Send Admin Copy (so it appears in Support View via email search)
-    try:
-        admin_subject = f"Support Ticket - {ticket_type}" # Keep "Support" in subject for the search tool
-        admin_body = f"Support ticket received from {user_email}.\n\nType: {ticket_type}\n\nDescription:\n{description}\n\nSubmitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        admin_html = f"<html><body><h2>New Support Ticket</h2><p><strong>From:</strong> {escape(user_email)}</p><p><strong>Type:</strong> {escape(ticket_type)}</p><p><strong>Description:</strong><br/>{escape(description)}</p><p style=\"color:#999;\">Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p></body></html>"
-        sent_admin, err_admin = send_email(SMTP_EMAIL, admin_subject, admin_body, admin_html)
-        results.append({"to": SMTP_EMAIL, "sent": sent_admin, "error": err_admin})
-    except Exception as e:
-        results.append({"to": SMTP_EMAIL, "sent": False, "error": str(e)})
-
-    ok = any(r.get('sent') for r in results)
-    if ok:
-        return jsonify({"success": True, "message": "Confirmation email sent", "results": results}), 200
+    if sent:
+        return jsonify({"success": True, "message": "Support ticket notification sent to admin"}), 200
     else:
-        return jsonify({"success": False, "message": "Failed to send email", "results": results}), 500
+        return jsonify({"success": False, "message": "Failed to send email to admin", "error": err}), 500
 
 @app.route('/api/send-feedback-notification', methods=['POST'])
 def send_feedback_notification():
-    """Send feedback confirmation email to user"""
+    """Send feedback notification to admin only"""
     data = request.json
     
     name = data.get('name')
     rating = data.get('rating')
     comment = data.get('comment')
-    email = data.get('email', None)  # Optional
+    email = data.get('email', "No Email Provided")
     
     if not all([name, rating, comment]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    # If no email provided, we still proceed to send Admin notification (for the Review List)
-    
-    results = []
+    # Send ONLY to Admin (docustorecollegeerp@gmail.com)
+    subject = f"New Feedback Received From: {name}"
+    body = f"""
+New Feedback Received
 
-    # 1. Send Thank You email to User (if email exists)
-    if email:
-        subject = "Thank You for Your Feedback - MS College Document Store"
-        # ... (Body definitions skipped for brevity, they are already in the file or I can keep them if I don't overwrite) ...
-        # Actually I need to construct the bodies if I'm replacing the block. 
-        # Let's assume the previous replacement content definition.
-        
-        body = f"""
-Dear {name},
+From: {name}
+Email: {email}
+Rating: {rating} / 5
 
-Thank you for sharing your feedback with MS College Document Store!
-
-Your {rating}-star rating and comments help us improve our service.
-
-Your Feedback:
+Comment:
 "{comment}"
 
-We appreciate your input!
-
-Best regards,
-MS College Team
+Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
-        
-        html_body = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%); padding: 30px; text-align: center;">
-                    <h1 style="color: white; margin: 0;">Feedback Received</h1>
+    
+    html_body = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0;">✨ New User Feedback</h1>
+            </div>
+            
+            <div style="padding: 30px; background: #f9f9f9;">
+                <div style="background: white; padding: 20px; border-left: 4px solid #ff8c00; margin: 20px 0; border-radius: 4px;">
+                    <p style="margin: 0 0 10px 0;"><strong>👤 Name:</strong> {escape(name)}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>📧 Email:</strong> {escape(email)}</p>
+                    <p style="margin: 0 0 10px 0;"><strong>⭐ Rating:</strong> {rating} / 5</p>
+                    <p style="margin: 0 0 10px 0;"><strong>💬 Comment:</strong></p>
+                    <p style="margin: 0; color: #555; background: #eee; padding: 15px; border-radius: 4px;">"{escape(comment)}"</p>
+                    <p style="margin: 15px 0 0 0; font-size: 12px; color: #999;">
+                        Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                    </p>
                 </div>
-                
-                <div style="padding: 30px; background: #f9f9f9;">
-                    <p>Dear {name},</p>
-                    <p>Thank you for sharing your feedback with <strong>MS College Document Store</strong>.</p>
-                    <p>We appreciate your input and will use it to improve our service.</p>
-                    
-                    <div style="background: white; padding: 20px; border-left: 4px solid #ff8c00; margin: 20px 0; border-radius: 4px;">
-                        <p style="margin: 0 0 10px 0;"><strong>Rating:</strong> {rating} / 5</p>
-                        <p style="margin: 0 0 10px 0;"><strong>Comment:</strong></p>
-                        <p style="margin: 0; color: #555;">{comment}</p>
-                        <p style="margin: 15px 0 0 0; font-size: 12px; color: #999;">
-                            Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-                        </p>
-                    </div>
-                    
-                    <p>Best regards,<br/>
-                    <strong>MS College Team</strong></p>
-                </div>
-                
-                <div style="background: #333; padding: 20px; text-align: center; color: #999; font-size: 12px;">
-                    <p>This is an automated confirmation email from MS College Document Store</p>
-                </div>
-            </body>
-        </html>
-        """
-        
-        try:
-            sent_user, err_user = send_email(email, subject, body, html_body)
-            results.append({"to": email, "sent": sent_user, "error": err_user})
-        except Exception as e:
-            results.append({"to": email, "sent": False, "error": str(e)})
-
-    # 2. Send Admin Copy (ALWAYS)
-    try:
-        admin_subject = f"Feedback - {name or 'Anonymous'}" # Keep "Feedback" in subject for the search tool
-        admin_body = f"Feedback received from {name or 'Anonymous'} ({email or 'no email provided'}).\n\nRating: {rating}\n\nComment:\n{comment}\n\nSubmitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        admin_html = f"<html><body><h2>New Feedback Received</h2><p><strong>From:</strong> {escape(name)} ({escape(email or 'No Email')})</p><p><strong>Rating:</strong> {rating}</p><p><strong>Comment:</strong><br/>{escape(comment)}</p><p style=\"color:#999;\">Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p></body></html>"
-        sent_admin, err_admin = send_email(SMTP_EMAIL, admin_subject, admin_body, admin_html)
-        results.append({"to": SMTP_EMAIL, "sent": sent_admin, "error": err_admin})
-    except Exception as e:
-        results.append({"to": SMTP_EMAIL, "sent": False, "error": str(e)})
-
-    ok = any(r.get('sent') for r in results)
-    if ok:
-        return jsonify({"success": True, "message": "Thank you email sent", "results": results}), 200
+            </div>
+        </body>
+    </html>
+    """
+    
+    sent, err = send_email(SMTP_EMAIL, subject, body, html_body)
+    
+    if sent:
+        return jsonify({"success": True, "message": "Feedback notification sent to admin"}), 200
     else:
-        return jsonify({"success": False, "message": "Email failed but feedback saved", "results": results}), 200
+        return jsonify({"success": False, "message": "Failed to send email to admin", "error": err}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():

@@ -1411,6 +1411,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('.star').forEach(s => s.style.color = '#ccc');
                 document.getElementById('feedback-rating').value = '0';
                 document.getElementById('rating-text').textContent = 'Select a rating';
+
+                // Automatically switch to Feedback Review tab
+                const reviewTabBtn = document.querySelector('.tab-btn[data-tab="review-feedback"]');
+                if (reviewTabBtn) reviewTabBtn.click();
+
                 loadFeedback(); // Refresh list
             } catch (e) {
                 console.error(e);
