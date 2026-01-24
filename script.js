@@ -105,16 +105,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (authBtn) {
         authBtn.addEventListener('click', async () => {
-            const email = emailInput.value;
+            const email = emailInput.value.trim();
             const password = passInput.value;
-            if (!email || !password) { showModal("Please enter email and password."); return; }
+            
+            // Validation
+            if (!email || !password) { 
+                showModal("Please enter email and password."); 
+                return; 
+            }
+            
+            // Email format validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showModal("Please enter a valid email address (e.g., user@example.com)");
+                return;
+            }
+            
+            // Password validation
+            if (password.length < 6) {
+                showModal("Password must be at least 6 characters long.");
+                return;
+            }
 
             try {
                 authBtn.disabled = true; authBtn.textContent = "Processing...";
-                if (isSignupMode) { await window.fbSignUp(email, password); showModal("Account created! Please complete your profile."); }
-                else { await window.fbSignIn(email, password); }
+                if (isSignupMode) { 
+                    await window.fbSignUp(email, password); 
+                    showModal("Account created! Please complete your profile."); 
+                }
+                else { 
+                    await window.fbSignIn(email, password); 
+                }
             } catch (err) {
-                showModal("Auth Failed: " + err.message);
+                let errorMsg = err.message;
+                // Handle specific Firebase errors
+                if (errorMsg.includes('auth/invalid-email')) errorMsg = "Invalid email format.";
+                else if (errorMsg.includes('auth/user-not-found')) errorMsg = "No account found with this email.";
+                else if (errorMsg.includes('auth/wrong-password')) errorMsg = "Incorrect password.";
+                else if (errorMsg.includes('auth/email-already-in-use')) errorMsg = "Email already in use.";
+                else if (errorMsg.includes('auth/weak-password')) errorMsg = "Password is too weak (min 6 characters).";
+                
+                showModal("Auth Failed: " + errorMsg);
                 authBtn.disabled = false; authBtn.textContent = isSignupMode ? "Create Account" : "Login";
             }
         });
