@@ -1332,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (emailSent) {
                     showModal("Ticket submitted! We will contact you soon.");
                 } else {
-                    showModal(`Ticket Received! (Note: notification email failed, but your ticket is recorded).`);
+                    showModal(`Ticket Received! (Note: notification email failed [${emailError}], but your ticket is recorded).`);
                 }
                 document.getElementById('support-email').value = '';
                 document.getElementById('support-desc').value = '';
@@ -1441,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (emailSent) {
                     showModal("Feedback Sent! Thank you.");
                 } else {
-                    showModal(`Feedback Received! (Note: notification email failed, but your review is recorded).`);
+                    showModal(`Feedback Received! (Note: notification email failed [${emailError}], but your review is recorded).`);
                 }
                 // Clear form
                 document.getElementById('feedback-name').value = '';
