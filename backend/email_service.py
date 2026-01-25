@@ -20,13 +20,18 @@ CORS(app)  # Allow requests from your frontend
 # Load environment variables from .env if present
 load_dotenv()
 
-# SMTP Configuration
+# SMTP Configuration (Sender)
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465  # Switched to 465 for SSL (more reliable on Render)
-SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "your-email@gmail.com")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "your-app-password")
+MAIL_SENDER_EMAIL = os.environ.get("MAIL_SENDER_EMAIL", "your-email@gmail.com")
+MAIL_SENDER_PASSWORD = os.environ.get("MAIL_SENDER_PASSWORD", "your-app-password")
+
+# IMAP & Admin Configuration (Receiver)
 IMAP_SERVER = "imap.gmail.com"
 IMAP_PORT = 993
+MAIL_RECEIVER_EMAIL = os.environ.get("MAIL_RECEIVER_EMAIL", "docustorecollegeerp@gmail.com")
+MAIL_RECEIVER_PASSWORD = os.environ.get("MAIL_RECEIVER_PASSWORD", "your-app-password")
+
 SMTP_DEBUG = os.environ.get("SMTP_DEBUG", "0") in ["1", "true", "True"]
 
 def send_email(to_email, subject, body, html_body=None):
@@ -35,7 +40,7 @@ def send_email(to_email, subject, body, html_body=None):
     try:
         # Create message
         msg = MIMEMultipart('alternative')
-        msg['From'] = SMTP_EMAIL
+        msg['From'] = MAIL_SENDER_EMAIL
         msg['To'] = to_email
         msg['Subject'] = subject
 
@@ -53,14 +58,14 @@ def send_email(to_email, subject, body, html_body=None):
 
         try:
             # Masked logging for verification on Render
-            masked_email = f"{SMTP_EMAIL[:3]}...{SMTP_EMAIL[-3:]}" if len(SMTP_EMAIL) > 6 else "***"
-            masked_pass = f"{SMTP_PASSWORD[:2]}...{SMTP_PASSWORD[-2:]}" if len(SMTP_PASSWORD) > 4 else "***"
-            print(f"Logging in as {masked_email} (Length: {len(SMTP_EMAIL)})")
-            print(f"Using password starting with '{SMTP_PASSWORD[:2]}...' (Length: {len(SMTP_PASSWORD)})")
+            masked_email = f"{MAIL_SENDER_EMAIL[:3]}...{MAIL_SENDER_EMAIL[-3:]}" if len(MAIL_SENDER_EMAIL) > 6 else "***"
+            masked_pass = f"{MAIL_SENDER_PASSWORD[:2]}...{MAIL_SENDER_PASSWORD[-2:]}" if len(MAIL_SENDER_PASSWORD) > 4 else "***"
+            print(f"Logging in as {masked_email} (Length: {len(MAIL_SENDER_EMAIL)})")
+            print(f"Using password starting with '{MAIL_SENDER_PASSWORD[:2]}...' (Length: {len(MAIL_SENDER_PASSWORD)})")
             
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.login(MAIL_SENDER_EMAIL, MAIL_SENDER_PASSWORD)
             print("Login successful. Sending email...")
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+            server.sendmail(MAIL_SENDER_EMAIL, to_email, msg.as_string())
             print("Email sent successfully.")
             server.quit()
             return True, None
@@ -130,7 +135,7 @@ Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     </html>
     """
     
-    sent, err = send_email(SMTP_EMAIL, subject, body, html_body)
+    sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body)
     
     if sent:
         return jsonify({"success": True, "message": "Support ticket notification sent to admin"}), 200
@@ -188,7 +193,7 @@ Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     </html>
     """
     
-    sent, err = send_email(SMTP_EMAIL, subject, body, html_body)
+    sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body)
     
     if sent:
         return jsonify({"success": True, "message": "Feedback notification sent to admin"}), 200
@@ -206,7 +211,7 @@ def fetch_unseen_emails(max_messages=10):
     results = []
     try:
         mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-        mail.login(SMTP_EMAIL, SMTP_PASSWORD)
+        mail.login(MAIL_RECEIVER_EMAIL, MAIL_RECEIVER_PASSWORD)
         mail.select("inbox")
 
         typ, data = mail.search(None, 'UNSEEN')
@@ -280,7 +285,7 @@ def search_emails_by_subject(subject, max_messages=20):
     results = []
     try:
         mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
-        mail.login(SMTP_EMAIL, SMTP_PASSWORD)
+        mail.login(MAIL_RECEIVER_EMAIL, MAIL_RECEIVER_PASSWORD)
         mail.select('inbox')
 
         # Search by subject (case-insensitive)
