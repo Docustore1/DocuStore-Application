@@ -22,7 +22,7 @@ load_dotenv()
 
 # SMTP Configuration (Sender)
 SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 465  # Use port 465 for SSL configuration
+SMTP_PORT = 587  # Use port 587 for STARTTLS configuration
 MAIL_SENDER_EMAIL = os.environ.get("MAIL_SENDER_EMAIL", "your-email@gmail.com")
 MAIL_SENDER_PASSWORD = os.environ.get("MAIL_SENDER_PASSWORD", "your-app-password")
 
@@ -49,13 +49,15 @@ def send_email(to_email, subject, body, html_body=None):
         if html_body:
             msg.attach(MIMEText(html_body, 'html'))
 
-        # Use SMTP_SSL for Port 465
+        # Use SMTP on Port 587 with STARTTLS
         print(f"Connecting to {SMTP_SERVER}:{SMTP_PORT}...")
-        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=30)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
         
         if SMTP_DEBUG:
             server.set_debuglevel(1)
 
+        server.starttls() # Secure the connection
+        
         try:
             # Masked logging for verification on Render
             masked_email = f"{MAIL_SENDER_EMAIL[:3]}...{MAIL_SENDER_EMAIL[-3:]}" if len(MAIL_SENDER_EMAIL) > 6 else "***"
