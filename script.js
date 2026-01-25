@@ -3,10 +3,8 @@ let allFilesData = [];
 let currentFolderId = 'root';
 let folderHistory = [];
 
-// Backend URL configuration - auto-detect environment
-const BACKEND_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:5000'
-    : 'https://docustore-backend.onrender.com';
+// Backend URL configuration - Point to live Render backend for production/testing
+const BACKEND_URL = 'https://docustore-backend.onrender.com';
 
 document.addEventListener('DOMContentLoaded', () => {
 
