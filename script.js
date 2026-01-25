@@ -1855,16 +1855,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             feedbackList.innerHTML = feedbackItems.map(item => `
                 <div class="file-item" style="display: block; padding: 15px; margin-bottom: 10px;">
-                    <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="font-weight: 600; color: var(--primary-orange);">💬 ${escapeHtml(item.name || 'Anonymous')}</span>
-                            <span style="font-size: 1.2rem;">${'⭐'.repeat(parseInt(item.rating || 0))}</span>
-                            <span style="color: #666; font-size: 0.85rem;">(${item.rating}/5)</span>
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: var(--primary-orange);">💬 ${escapeHtml(item.name || 'Anonymous')}</span>
+                                <span style="font-size: 1.2rem;">${'⭐'.repeat(parseInt(item.rating || 0))}</span>
+                                <span style="color: #666; font-size: 0.85rem;">(${item.rating}/5)</span>
+                            </div>
+                            <div style="color: #555; margin-bottom: 5px;">"${escapeHtml(item.comment || '')}"</div>
+                            <div style="color: #999; font-size: 0.8rem;">
+                                📅 ${item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Unknown date'}
+                            </div>
                         </div>
-                        <div style="color: #555; margin-bottom: 5px;">"${escapeHtml(item.comment || '')}"</div>
-                        <div style="color: #999; font-size: 0.8rem;">
-                            📅 ${item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Unknown date'}
-                        </div>
+                        <button class="btn-action delete" onclick="deleteFeedback('${item.id}')" title="Delete">
+                            ❌
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -1889,17 +1894,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             supportList.innerHTML = supportItems.map(item => `
                 <div class="file-item" style="display: block; padding: 15px; margin-bottom: 10px;">
-                    <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="font-weight: 600; color: var(--primary-orange);">🎫 ${escapeHtml(item.email || 'No email')}</span>
-                            <span style="background: #f0f0f0; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem;">
-                                ${escapeHtml(item.type || 'General')}
-                            </span>
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: var(--primary-orange);">🎫 ${escapeHtml(item.email || 'No email')}</span>
+                                <span style="background: #f0f0f0; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem;">
+                                    ${escapeHtml(item.type || 'General')}
+                                </span>
+                            </div>
+                            <div style="color: #555; margin-bottom: 5px;">${escapeHtml(item.description || '')}</div>
+                            <div style="color: #999; font-size: 0.8rem;">
+                                📅 ${item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Unknown date'}
+                            </div>
                         </div>
-                        <div style="color: #555; margin-bottom: 5px;">${escapeHtml(item.description || '')}</div>
-                        <div style="color: #999; font-size: 0.8rem;">
-                            📅 ${item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Unknown date'}
-                        </div>
+                        <button class="btn-action delete" onclick="deleteSupport('${item.id}')" title="Delete">
+                            ❌
+                        </button>
                     </div>
                 </div>
             `).join('');
