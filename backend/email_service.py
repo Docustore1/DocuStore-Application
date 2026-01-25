@@ -21,6 +21,18 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 # Load environment variables
 load_dotenv()
 
+@app.route('/')
+def home():
+    return jsonify({
+        "message": "DocuStore Email Service API is running",
+        "endpoints": {
+            "health": "/health",
+            "support": "/api/send-support-email (POST)",
+            "feedback": "/api/send-feedback-notification (POST)"
+        },
+        "status": "online"
+    }), 200
+
 # SMTP Configuration
 SMTP_SERVER = "smtp.gmail.com"
 MAIL_SENDER_EMAIL = os.environ.get("MAIL_SENDER_EMAIL")
