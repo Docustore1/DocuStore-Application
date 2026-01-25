@@ -1796,6 +1796,137 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Feedback Page Logic (Email Based) ---
     // (Consolidated above)
 
+
+    // --- Feedback & Support Delete Functionality ---
+
+    // Make delete functions global so they can be called from inline onclick
+    window.deleteFeedback = async function (feedbackId) {
+        if (!confirm('Delete this feedback entry?')) return;
+
+        try {
+            if (window.fbDeleteFeedback) {
+                await window.fbDeleteFeedback(feedbackId);
+                showModal('Feedback deleted successfully!');
+                // Reload feedback list if on feedback page
+                if (document.getElementById('feedback-list')) {
+                    loadAllFeedback();
+                }
+            } else {
+                showModal('Delete function not available yet.');
+            }
+        } catch (error) {
+            console.error('Delete feedback error:', error);
+            showModal('Failed to delete feedback: ' + error.message);
+        }
+    };
+
+    window.deleteSupport = async function (supportId) {
+        if (!confirm('Delete this support ticket?')) return;
+
+        try {
+            if (window.fbDeleteSupport) {
+                await window.fbDeleteSupport(supportId);
+                showModal('Support ticket deleted successfully!');
+                // Reload support list if on support page
+                if (document.getElementById('support-list')) {
+                    loadAllSupport();
+                }
+            } else {
+                showModal('Delete function not available yet.');
+            }
+        } catch (error) {
+            console.error('Delete support error:', error);
+            showModal('Failed to delete support ticket: ' + error.message);
+        }
+    };
+
+    // Load all feedback entries
+    async function loadAllFeedback() {
+        const feedbackList = document.getElementById('feedback-list');
+        if (!feedbackList || !window.fbGetAllFeedback) return;
+
+        try {
+            const feedbackItems = await window.fbGetAllFeedback();
+
+            if (!feedbackItems || feedbackItems.length === 0) {
+                feedbackList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No feedback yet.</div>';
+                return;
+            }
+
+            feedbackList.innerHTML = feedbackItems.map(item => `
+                <div class="file-item" style="display: block; padding: 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: var(--primary-orange);">💬 ${escapeHtml(item.name || 'Anonymous')}</span>
+                                <span style="font-size: 1.2rem;">${'⭐'.repeat(parseInt(item.rating || 0))}</span>
+                                <span style="color: #666; font-size: 0.85rem;">(${item.rating}/5)</span>
+                            </div>
+                            <div style="color: #555; margin-bottom: 5px;">"${escapeHtml(item.comment || '')}"</div>
+                            <div style="color: #999; font-size: 0.8rem;">
+                                📅 ${item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Unknown date'}
+                            </div>
+                        </div>
+                        <button class="btn-action delete" onclick="deleteFeedback('${item.id}')" title="Delete">
+                            ❌
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Load feedback error:', error);
+            feedbackList.innerHTML = '<div style="text-align: center; color: red; padding: 2rem;">Error loading feedback</div>';
+        }
+    }
+
+    // Load all support tickets
+    async function loadAllSupport() {
+        const supportList = document.getElementById('support-list');
+        if (!supportList || !window.fbGetAllSupport) return;
+
+        try {
+            const supportItems = await window.fbGetAllSupport();
+
+            if (!supportItems || supportItems.length === 0) {
+                supportList.innerHTML = '<div style="text-align: center; color: #666; padding: 2rem;">No support tickets yet.</div>';
+                return;
+            }
+
+            supportList.innerHTML = supportItems.map(item => `
+                <div class="file-item" style="display: block; padding: 15px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <span style="font-weight: 600; color: var(--primary-orange);">🎫 ${escapeHtml(item.email || 'No email')}</span>
+                                <span style="background: #f0f0f0; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem;">
+                                    ${escapeHtml(item.type || 'General')}
+                                </span>
+                            </div>
+                            <div style="color: #555; margin-bottom: 5px;">${escapeHtml(item.description || '')}</div>
+                            <div style="color: #999; font-size: 0.8rem;">
+                                📅 ${item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Unknown date'}
+                            </div>
+                        </div>
+                        <button class="btn-action delete" onclick="deleteSupport('${item.id}')" title="Delete">
+                            ❌
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Load support error:', error);
+            supportList.innerHTML = '<div style="text-align: center; color: red; padding: 2rem;">Error loading support tickets</div>';
+        }
+    }
+
+    // Initialize feedback/support lists on page load
+    if (document.getElementById('feedback-list')) {
+        loadAllFeedback();
+    }
+    if (document.getElementById('support-list')) {
+        loadAllSupport();
+    }
+
     // --- End of DOMContentLoaded ---
 });
 

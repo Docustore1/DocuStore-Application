@@ -254,3 +254,69 @@ window.fbLoadSettings = async () => {
     if (!docSnap.empty) return docSnap.docs[0].data();
     return null;
 };
+
+// 11. Get All Feedback (current user's feedback only)
+window.fbGetAllFeedback = async () => {
+    const user = auth.currentUser;
+    if (!user) return [];
+    try {
+        const q = query(
+            collection(db, "feedback"),
+            where("userId", "==", user.uid),
+            orderBy("createdAt", "desc")
+        );
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().createdAt }));
+    } catch (error) {
+        console.error("Get all feedback error:", error);
+        return [];
+    }
+};
+
+// 12. Get All Support Tickets (current user's tickets only)
+window.fbGetAllSupport = async () => {
+    const user = auth.currentUser;
+    if (!user) return [];
+    try {
+        const q = query(
+            collection(db, "tickets"),
+            where("userId", "==", user.uid),
+            orderBy("createdAt", "desc")
+        );
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().createdAt }));
+    } catch (error) {
+        console.error("Get all support error:", error);
+        return [];
+    }
+};
+
+// 13. Delete Feedback
+window.fbDeleteFeedback = async (feedbackId) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Unauthorized");
+
+    try {
+        const docRef = doc(db, "feedback", feedbackId);
+        await deleteDoc(docRef);
+        return true;
+    } catch (error) {
+        console.error("Delete feedback error:", error);
+        throw error;
+    }
+};
+
+// 14. Delete Support Ticket
+window.fbDeleteSupport = async (supportId) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Unauthorized");
+
+    try {
+        const docRef = doc(db, "tickets", supportId);
+        await deleteDoc(docRef);
+        return true;
+    } catch (error) {
+        console.error("Delete support error:", error);
+        throw error;
+    }
+};
