@@ -22,7 +22,7 @@ load_dotenv()
 
 # SMTP Configuration (Sender)
 SMTP_SERVER = "smtp.googlemail.com" # Using alternate hostname
-SMTP_PORT = 587  # Switched to 587 for STARTTLS (often better on Render/Cloud)
+SMTP_PORT = 465  # Reverting to 465 with googlemail alternate
 MAIL_SENDER_EMAIL = os.environ.get("MAIL_SENDER_EMAIL", "your-email@gmail.com")
 MAIL_SENDER_PASSWORD = os.environ.get("MAIL_SENDER_PASSWORD", "your-app-password")
 
@@ -58,9 +58,9 @@ def send_email(to_email, subject, body, html_body=None):
         except Exception as dns_err:
             print(f"DNS Resolution failed for {SMTP_SERVER}: {dns_err}")
 
+        # Use SMTP_SSL for Port 465
         print(f"Connecting to {SMTP_SERVER}:{SMTP_PORT}...")
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
-        server.starttls() # Secure the connection
+        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=30)
         
         if SMTP_DEBUG:
             server.set_debuglevel(1)
