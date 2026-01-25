@@ -1,5 +1,5 @@
-# Email Service for Document Store - SendGrid Version
-# Python Flask backend with SendGrid API integration
+# Email Service for Document Store - Resend Version
+# Python Flask backend with Resend API integration
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -7,8 +7,7 @@ from datetime import datetime
 import os
 from html import escape
 from dotenv import load_dotenv
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+import resend
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -16,11 +15,16 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 # Load environment variables
 load_dotenv()
 
+# Resend Configuration
+resend.api_key = os.environ.get("RESEND_API_KEY")
+MAIL_SENDER_EMAIL = os.environ.get("MAIL_SENDER_EMAIL", "techbyte659@gmail.com")
+MAIL_RECEIVER_EMAIL = os.environ.get("MAIL_RECEIVER_EMAIL", "docustorecollegeerp@gmail.com")
+
 @app.route('/')
 def home():
     return jsonify({
         "message": "DocuStore Email Service API is running",
-        "provider": "SendGrid",
+        "provider": "Resend",
         "endpoints": {
             "health": "/health",
             "support": "/api/send-support-email (POST)",
@@ -29,47 +33,38 @@ def home():
         "status": "online"
     }), 200
 
-# SendGrid Configuration
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")
-MAIL_SENDER_EMAIL = os.environ.get("MAIL_SENDER_EMAIL", "techbyte659@gmail.com")
-MAIL_RECEIVER_EMAIL = os.environ.get("MAIL_RECEIVER_EMAIL", "docustorecollegeerp@gmail.com")
-
 def send_email(to_email, subject, body, html_body=None, user_email=None):
-    """Send an email using SendGrid API."""
+    """Send an email using Resend API."""
     try:
-        # Create sender with display name
-        from_email = Email(MAIL_SENDER_EMAIL, "DocuStore Notifications")
-        
-        # Create recipient
-        to = To(to_email)
+        params = {
+            "from": f"DocuStore Notifications <{MAIL_SENDER_EMAIL}>",
+            "to": [to_email],
+            "subject": subject,
+        }
         
         # Use HTML if provided, otherwise plain text
         if html_body:
-            content = Content("text/html", html_body)
+            params["html"] = html_body
         else:
-            content = Content("text/plain", body)
-        
-        # Create Mail object
-        mail = Mail(from_email, to, subject, content)
+            params["text"] = body
         
         # Set reply-to if user email is provided
         if user_email:
-            mail.reply_to = Email(user_email)
+            params["reply_to"] = user_email
         
-        # Send via SendGrid
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(mail)
+        # Send via Resend
+        email = resend.Emails.send(params)
         
-        print(f"DEBUG: SendGrid response status: {response.status_code}")
+        print(f"DEBUG: Resend response: {email}")
         
-        if response.status_code in [200, 201, 202]:
+        if email and 'id' in email:
             return True, None
         else:
-            return False, f"SendGrid returned status {response.status_code}"
+            return False, "Resend did not return an email ID"
             
     except Exception as e:
         error_msg = str(e)
-        print(f"DEBUG: SendGrid error: {error_msg}")
+        print(f"DEBUG: Resend error: {error_msg}")
         return False, error_msg
 
 @app.route('/api/send-support-email', methods=['POST'])
@@ -122,7 +117,7 @@ Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body, user_email=user_email)
     
     if sent:
-        return jsonify({"success": True, "message": "Support ticket sent via SendGrid"}), 200
+        return jsonify({"success": True, "message": "Support ticket sent via Resend"}), 200
     else:
         return jsonify({"success": False, "message": "Failed to send email", "error": err}), 500
 
@@ -179,16 +174,16 @@ Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body, user_email=email)
     
     if sent:
-        return jsonify({"success": True, "message": "Feedback sent via SendGrid"}), 200
+        return jsonify({"success": True, "message": "Feedback sent via Resend"}), 200
     else:
         return jsonify({"success": False, "message": "Failed to send email", "error": err}), 500
 
 @app.route('/health', methods=['GET'])
 def health():
-    has_api_key = bool(SENDGRID_API_KEY and len(SENDGRID_API_KEY) > 10)
+    has_api_key = bool(resend.api_key and len(resend.api_key) > 10)
     return jsonify({
         "status": "healthy",
-        "service": "email-service-sendgrid",
+        "service": "email-service-resend",
         "api_key_configured": has_api_key
     }), 200
 
