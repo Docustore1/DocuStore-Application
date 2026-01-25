@@ -34,11 +34,12 @@ MAIL_RECEIVER_PASSWORD = os.environ.get("MAIL_RECEIVER_PASSWORD", "your-app-pass
 
 SMTP_DEBUG = os.environ.get("SMTP_DEBUG", "0") in ["1", "true", "True"]
 
-def send_email(to_email, subject, body, html_body=None):
+def send_email(to_email, subject, body, html_body=None, user_email=None):
     """Send an email with port fallback and detailed logging for debugging Render connectivity."""
     msg = MIMEMultipart('alternative')
-    msg['From'] = f"TechByte <{MAIL_SENDER_EMAIL}>"
+    msg['From'] = f"DocuStore Notifications <{MAIL_SENDER_EMAIL}>"
     msg['To'] = to_email
+    msg['Reply-To'] = user_email if 'user_email' in locals() else MAIL_SENDER_EMAIL
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
     if html_body:
@@ -75,46 +76,6 @@ def send_email(to_email, subject, body, html_body=None):
             
     return False, f"All SMTP ports failed. Last error: {last_error}"
 
-        # Add plain text and HTML versions
-        msg.attach(MIMEText(body, 'plain'))
-        if html_body:
-            msg.attach(MIMEText(html_body, 'html'))
-
-        # Use SMTP on Port 587 with STARTTLS
-        print(f"Connecting to {SMTP_SERVER}:{SMTP_PORT}...")
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30)
-        
-        if SMTP_DEBUG:
-            server.set_debuglevel(1)
-
-        server.starttls() # Secure the connection
-        
-        try:
-            # Masked logging for verification on Render
-            masked_email = f"{MAIL_SENDER_EMAIL[:3]}...{MAIL_SENDER_EMAIL[-3:]}" if len(MAIL_SENDER_EMAIL) > 6 else "***"
-            masked_pass = f"{MAIL_SENDER_PASSWORD[:2]}...{MAIL_SENDER_PASSWORD[-2:]}" if len(MAIL_SENDER_PASSWORD) > 4 else "***"
-            print(f"Logging in as {masked_email} (Length: {len(MAIL_SENDER_EMAIL)})")
-            print(f"Using password starting with '{MAIL_SENDER_PASSWORD[:2]}...' (Length: {len(MAIL_SENDER_PASSWORD)})")
-            
-            server.login(MAIL_SENDER_EMAIL, MAIL_SENDER_PASSWORD)
-            print("Login successful. Sending email...")
-            server.sendmail(MAIL_SENDER_EMAIL, to_email, msg.as_string())
-            print("Email sent successfully.")
-            server.quit()
-            return True, None
-        except smtplib.SMTPAuthenticationError as auth_err:
-            print(f"Authentication failed: {auth_err}")
-            if server:
-                server.quit()
-            return False, "Authentication failed. Check your email and app-specific password."
-        except Exception as e:
-            print(f"Error during SMTP session: {e}")
-            if server:
-                try:
-                    server.quit()
-                except:
-                    pass
-            return False, str(e)
 
 @app.route('/api/send-support-email', methods=['POST'])
 def send_support_email():
@@ -164,7 +125,7 @@ Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     </html>
     """
     
-    sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body)
+    sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body, user_email=user_email)
     
     if sent:
         return jsonify({"success": True, "message": "Support ticket notification sent to admin"}), 200
@@ -222,7 +183,7 @@ Submitted: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     </html>
     """
     
-    sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body)
+    sent, err = send_email(MAIL_RECEIVER_EMAIL, subject, body, html_body, user_email=email)
     
     if sent:
         return jsonify({"success": True, "message": "Feedback notification sent to admin"}), 200
@@ -387,7 +348,7 @@ def api_test_email():
     if not to_email:
         return jsonify({"error": "Missing 'email' in request body"}), 400
 
-    sent, err = send_email(to_email, subject, body)
+    sent, err = send_email(to_email, subject, body, user_email=MAIL_RECEIVER_EMAIL) # Using receiver as fallback for test
     if sent:
         return jsonify({"success": True, "message": "Test email sent"}), 200
     else:
