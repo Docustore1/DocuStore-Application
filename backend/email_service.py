@@ -35,14 +35,45 @@ MAIL_RECEIVER_PASSWORD = os.environ.get("MAIL_RECEIVER_PASSWORD", "your-app-pass
 SMTP_DEBUG = os.environ.get("SMTP_DEBUG", "0") in ["1", "true", "True"]
 
 def send_email(to_email, subject, body, html_body=None):
-    """Send an email using SMTP_SSL on port 465."""
-    server = None
-    try:
-        # Create message
-        msg = MIMEMultipart('alternative')
-        msg['From'] = MAIL_SENDER_EMAIL
-        msg['To'] = to_email
-        msg['Subject'] = subject
+    """Send an email with port fallback and detailed logging for debugging Render connectivity."""
+    msg = MIMEMultipart('alternative')
+    msg['From'] = f"TechByte <{MAIL_SENDER_EMAIL}>"
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+    if html_body:
+        msg.attach(MIMEText(html_body, 'html'))
+
+    # Try Port 587 (STARTTLS) first, then Port 465 (SSL)
+    ports_to_try = [(587, False), (465, True)]
+    last_error = "No ports tried"
+
+    for port, use_ssl in ports_to_try:
+        server = None
+        try:
+            print(f"DEBUG: Attempting SMTP on port {port} (SSL={use_ssl})...")
+            if use_ssl:
+                server = smtplib.SMTP_SSL(SMTP_SERVER, port, timeout=10)
+            else:
+                server = smtplib.SMTP(SMTP_SERVER, port, timeout=10)
+                server.starttls()
+            
+            print(f"DEBUG: Connected to port {port}. Logging in...")
+            server.login(MAIL_SENDER_EMAIL, MAIL_SENDER_PASSWORD)
+            print(f"DEBUG: Login successful on port {port}. Sending...")
+            server.sendmail(MAIL_SENDER_EMAIL, to_email, msg.as_string())
+            server.quit()
+            print(f"DEBUG: Email sent successfully via port {port}.")
+            return True, None
+        except Exception as e:
+            last_error = f"Port {port} failed: {str(e)}"
+            print(f"DEBUG: {last_error}")
+            if server:
+                try: server.close()
+                except: pass
+            continue
+            
+    return False, f"All SMTP ports failed. Last error: {last_error}"
 
         # Add plain text and HTML versions
         msg.attach(MIMEText(body, 'plain'))
@@ -84,10 +115,6 @@ def send_email(to_email, subject, body, html_body=None):
                 except:
                     pass
             return False, str(e)
-
-    except Exception as e:
-        print(f"Connection failed: {e}")
-        return False, f"Connection failed: {str(e)}"
 
 @app.route('/api/send-support-email', methods=['POST'])
 def send_support_email():
