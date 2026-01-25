@@ -1,4 +1,5 @@
-// script.js v8.1 - Finalized Auth Sync & Global Scoping
+// script.js v10.0 - Forced Refresh
+console.log("🚀 script.js VERSION 10.0 LOADED");
 let allFilesData = [];
 let currentFolderId = 'root';
 let folderHistory = [];
