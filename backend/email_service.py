@@ -15,7 +15,7 @@ from html import escape
 from dotenv import load_dotenv
 
 app = Flask(__name__)
-CORS(app)  # Allow requests from your frontend
+CORS(app, resources={r"/api/*": {"origins": "*"}})  # Explicitly allow all origins for API
 
 # Load environment variables from .env if present
 load_dotenv()
