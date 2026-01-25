@@ -685,20 +685,32 @@ textarea.input-field {
 .star-rating {
     display: flex;
     gap: 0.5rem;
-    font-size: 2rem;
+    font-size: 2.5rem;
     cursor: pointer;
+    user-select: none;
 }
 
 .star-rating .star {
-    color: #ccc;
+    color: #ddd;
     transition: color 0.2s, transform 0.2s;
+    text-shadow:
+        -1px -1px 0 #999,
+        1px -1px 0 #999,
+        -1px 1px 0 #999,
+        1px 1px 0 #999;
+    cursor: pointer;
 }
 
 .star-rating .star:hover,
 .star-rating .star.hovered,
 .star-rating .star.selected {
     color: var(--primary-yellow);
-    text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    text-shadow:
+        -1px -1px 0 #d4a017,
+        1px -1px 0 #d4a017,
+        -1px 1px 0 #d4a017,
+        1px 1px 0 #d4a017,
+        0 0 10px rgba(255, 215, 0, 0.6);
 }
 
 .star-rating .star:hover {
