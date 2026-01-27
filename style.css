@@ -55,7 +55,8 @@ body {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     text-align: center;
     max-width: 90%;
-    width: 500px;
+    width: 90%;
+    max-width: 500px;
 }
 
 .entry-container h1 {
@@ -907,330 +908,7 @@ body.dark-mode .rich-text-toolbar {
 }
 
 
-/* Mobile Responsive Adjustments */
-@media (max-width: 900px) {
-    .store-container {
-        padding: 0.75rem;
-        min-height: 100vh;
-    }
 
-    .store-header {
-        padding: 0.8rem 0.75rem;
-        align-items: center;
-    }
-
-    .store-header h2 {
-        font-size: 1.25rem;
-    }
-
-    .tabs {
-        position: sticky;
-        top: 56px;
-        z-index: 15;
-    }
-
-    .tab-btn {
-        padding: 0.7rem 0.5rem;
-        font-size: 1rem;
-    }
-
-    .content-section {
-        padding: 1rem;
-    }
-
-    .top-left-nav {
-        top: 0.9rem;
-        left: 0.7rem;
-        padding: 10px 14px;
-        font-size: 1rem;
-        background: rgba(255, 255, 255, 0.95);
-    }
-
-    .footer-links {
-        position: fixed;
-        top: 72px;
-        /* move to top under header */
-        bottom: auto;
-        left: 50%;
-        transform: translateX(-50%);
-        background: transparent;
-        gap: 0.6rem;
-        z-index: 40;
-        justify-content: center;
-        padding: 0 0.25rem;
-    }
-
-    /* Make footer links compact circular icons on small screens */
-    .footer-links a {
-        width: 56px;
-        height: 56px;
-        padding: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
-        font-weight: 700;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        position: relative;
-        text-indent: -9999px;
-        /* hide text but keep accessible */
-    }
-
-    /* Show label for the active footer button (icon + text) */
-    .footer-links a.active-link {
-        text-indent: 0;
-        width: auto;
-        height: auto;
-        padding: 10px 14px;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    /* Ensure icon and text align when active */
-    .footer-links a.active-link::before {
-        margin-right: 6px;
-    }
-
-    /* Add emoji icons before each link (keeps HTML unchanged) */
-    #link-feedback::before {
-        content: "📝";
-        font-size: 1.3rem;
-        display: inline-block;
-    }
-
-    #link-support::before {
-        content: "🛠️";
-        font-size: 1.2rem;
-        display: inline-block;
-    }
-
-    .footer-links a.active-link {
-        background: white;
-        color: var(--primary-orange);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-    }
-
-    .footer-links a.active-link {
-        background: #fff;
-        color: var(--primary-orange);
-    }
-
-    .star-rating {
-        font-size: 1.6rem;
-        gap: 0.4rem;
-    }
-
-    .input-field {
-        padding: 14px;
-        font-size: 1rem;
-    }
-
-    .btn {
-        padding: 12px 18px;
-        font-size: 1rem;
-        border-radius: 30px;
-    }
-
-    .file-list {
-        padding-bottom: 6rem;
-    }
-
-    /* Ensure all content has bottom space so footer doesn't overlap inputs */
-    .content-section {
-        padding-bottom: 8rem;
-        padding-top: 4rem;
-    }
-}
-
-/* Extra small devices */
-@media (max-width: 420px) {
-    .top-left-nav {
-        padding: 12px 16px;
-        font-size: 1.05rem;
-    }
-
-    .store-header h2 {
-        font-size: 1.05rem;
-    }
-
-    .tabs {
-        top: 56px;
-    }
-
-    .star-rating {
-        font-size: 1.4rem;
-    }
-
-    .tab-btn {
-        font-size: 0.95rem;
-        padding: 0.6rem 0.4rem;
-    }
-
-    .entry-container {
-        padding: 1.5rem;
-        width: 100%;
-    }
-}
-
-/* Structured breakpoints: mobile / tablet / laptop */
-/* Mobile: small phones */
-@media (max-width: 480px) {
-    body {
-        font-size: 15px;
-    }
-
-    .store-header {
-        padding: 10px 12px;
-    }
-
-    .store-header h2 {
-        font-size: 1.1rem;
-    }
-
-    .app-logo-small {
-        width: 48px;
-        height: 48px;
-    }
-
-    .tab-btn {
-        font-size: 0.95rem;
-        padding: 0.6rem;
-    }
-
-    .content-section {
-        padding: 1rem;
-    }
-
-    .input-field {
-        padding: 12px;
-        font-size: 0.95rem;
-    }
-
-    .modal-box {
-        max-width: 320px;
-    }
-
-    .btn.primary {
-        padding: 12px 16px;
-    }
-
-    .star-rating {
-        gap: 0.35rem;
-        font-size: 1.4rem;
-    }
-
-    .footer-links {
-        top: 68px;
-        bottom: auto;
-    }
-}
-
-/* Tablet: portrait and small laptops */
-@media (min-width: 481px) and (max-width: 1024px) {
-    body {
-        font-size: 16px;
-    }
-
-    .store-container {
-        padding: 0.75rem 1rem;
-    }
-
-    .store-header {
-        padding: 12px 16px;
-    }
-
-    .store-header h2 {
-        font-size: 1.25rem;
-    }
-
-    .tab-btn {
-        font-size: 1rem;
-        padding: 0.75rem 1rem;
-    }
-
-    .content-section {
-        padding: 1rem 1.25rem;
-    }
-
-    .input-field {
-        padding: 14px;
-    }
-
-    .file-list {
-        padding-bottom: 5.5rem;
-    }
-
-    .footer-links {
-        bottom: 18px;
-    }
-
-    /* show text labels next to icons on tablet if space available */
-    .footer-links a {
-        width: auto;
-        height: auto;
-        padding: 8px 12px;
-        border-radius: 999px;
-        text-indent: 0;
-    }
-
-    #link-feedback::before,
-    #link-support::before {
-        margin-right: 8px;
-    }
-}
-
-/* Laptop: larger screens but not full desktop */
-@media (min-width: 1025px) and (max-width: 1366px) {
-    body {
-        font-size: 16px;
-    }
-
-    .store-container {
-        max-width: 1100px;
-        margin: 0 auto;
-    }
-
-    .store-header {
-        padding: 1rem 1.25rem;
-    }
-
-    .store-header h2 {
-        font-size: 1.4rem;
-    }
-
-    .tab-btn {
-        font-size: 1.05rem;
-        padding: 0.9rem 1rem;
-    }
-
-    .content-section {
-        padding: 1.5rem 2rem;
-    }
-
-    .file-list {
-        padding-bottom: 3rem;
-    }
-
-    .footer-links {
-        position: absolute;
-        top: 1.5rem;
-        bottom: auto;
-        left: 0;
-        transform: none;
-    }
-
-    .footer-links a {
-        width: auto;
-        height: auto;
-        padding: 6px 14px;
-        border-radius: 20px;
-        text-indent: 0;
-    }
-}
 
 /* Feedback card styles (user-friendly view) */
 .feedback-card {
@@ -1353,258 +1031,7 @@ body.dark-mode .folder-icon-svg {
     stroke: #ff8c00;
 }
 
-/* Responsive Design */
-@media (max-width: 600px) {
-    .store-header {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 1rem;
-        gap: 15px;
-    }
 
-    .header-right {
-        width: 100%;
-        align-items: stretch !important;
-    }
-
-    .top-links {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 5px;
-    }
-
-    .header-actions {
-        justify-content: flex-end;
-    }
-
-    .rich-text-toolbar {
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 10px;
-    }
-
-    .btn-toolbar {
-        padding: 8px;
-        flex: 0 0 auto;
-    }
-
-    .files-toolbar {
-        flex-direction: column;
-        align-items: stretch !important;
-        gap: 15px;
-    }
-
-    .files-toolbar>div {
-        justify-content: space-between;
-        width: 100%;
-    }
-
-    #file-search {
-        width: 100% !important;
-        flex-grow: 1;
-    }
-
-    .export-bar {
-        justify-content: center !important;
-    }
-
-    .entry-container {
-        padding: 1.5rem;
-    }
-
-    .store-container {
-        margin: 1rem auto;
-        width: 98%;
-    }
-
-    .tab-btn {
-        padding: 0.8rem;
-        font-size: 1rem;
-    }
-}
-
-/* --- Mobile Responsiveness Enhancements --- */
-
-@media (max-width: 480px) {
-    .store-container {
-        width: 100%;
-        margin: 0;
-        border-radius: 0;
-    }
-
-    .store-header {
-        flex-direction: column !important;
-        align-items: center !important;
-        text-align: center !important;
-        padding: 1rem !important;
-        gap: 10px !important;
-    }
-
-    .header-left {
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 5px !important;
-    }
-
-    .header-back-btn {
-        margin-right: 0;
-        margin-bottom: 5px;
-        width: 100%;
-        justify-content: center;
-    }
-
-    .header-text {
-        text-align: center !important;
-    }
-
-    .header-right {
-        width: 100% !important;
-        align-items: center !important;
-        margin-top: 5px !important;
-    }
-
-    .top-links {
-        display: flex !important;
-        justify-content: center !important;
-        gap: 20px !important;
-        width: 100% !important;
-        margin-bottom: 5px !important;
-    }
-
-    .header-actions {
-        display: flex !important;
-        justify-content: center !important;
-        width: 100% !important;
-        margin-top: 0 !important;
-    }
-
-    .files-toolbar {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 10px !important;
-        padding: 10px !important;
-    }
-
-    .files-toolbar>div {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        gap: 8px !important;
-        width: 100% !important;
-    }
-
-    #file-search {
-        width: 100% !important;
-        margin-bottom: 5px !important;
-    }
-
-    #btn-create-folder {
-        flex: 1 !important;
-        white-space: nowrap !important;
-        padding: 8px 12px !important;
-        font-size: 0.85rem !important;
-        height: auto !important;
-        min-height: 38px !important;
-    }
-
-    #btn-view-toggle {
-        height: 38px !important;
-        width: 38px !important;
-    }
-
-    .rich-text-toolbar {
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        padding: 5px !important;
-        gap: 5px !important;
-    }
-
-    .btn-toolbar {
-        padding: 6px !important;
-        min-width: 32px !important;
-        font-size: 0.9rem !important;
-        text-shadow: none;
-        /* Global fix for toolbars */
-    }
-
-    /* Fix potential visual glitch on Table button explicitly */
-    button[title="Insert Table"] {
-        text-shadow: none !important;
-        filter: none !important;
-        animation: none !important;
-    }
-
-    /* Mobile Color Picker Fix */
-    label.btn-toolbar[title="Text Color"] {
-        width: 44px !important;
-        height: 44px !important;
-        overflow: hidden !important;
-        position: relative !important;
-    }
-
-    label.btn-toolbar[title="Text Color"] span {
-        font-size: 1.4rem !important;
-    }
-
-    .export-bar {
-        justify-content: center !important;
-        gap: 5px !important;
-        margin-top: 10px !important;
-    }
-
-    .export-bar .btn {
-        padding: 6px 10px !important;
-        font-size: 0.75rem !important;
-    }
-
-    .file-item {
-        padding: 10px !important;
-        flex-wrap: wrap !important;
-    }
-
-    .file-name {
-        font-size: 0.9rem !important;
-        width: 100% !important;
-        margin-bottom: 5px !important;
-    }
-
-    .file-actions {
-        width: 100% !important;
-        justify-content: flex-end !important;
-        border-top: 1px solid #eee;
-        padding-top: 5px;
-    }
-
-    .btn-action {
-        padding: 6px !important;
-        font-size: 1.1rem !important;
-    }
-}
-
-@media (max-width: 320px) {
-    .store-header h2 {
-        font-size: 1.1rem !important;
-    }
-
-    .tab-btn {
-        padding: 0.6rem !important;
-        font-size: 0.85rem !important;
-    }
-
-    .rich-text-area {
-        height: 250px !important;
-    }
-
-    .btn {
-        padding: 8px 15px !important;
-        font-size: 0.85rem !important;
-    }
-
-    .app-logo {
-        width: 50px !important;
-        height: 50px !important;
-    }
-}
 
 /* Inline Preview Modal */
 .preview-overlay {
@@ -1875,9 +1302,294 @@ body.dark-mode .form-group label {
 }
 
 /* --- Mobile Responsive Styles for Feedback/Support --- */
-@media (max-width: 600px) {
+/* --- Consolidated Mobile Responsive Styles --- */
 
-    /* Header adjustments for feedback/support pages */
+/* Laptop (1025px - 1366px) */
+@media (min-width: 1025px) and (max-width: 1366px) {
+    body {
+        font-size: 16px;
+    }
+
+    .store-container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .store-header {
+        padding: 1rem 1.25rem;
+    }
+
+    .store-header h2 {
+        font-size: 1.4rem;
+    }
+
+    .tab-btn {
+        font-size: 1.05rem;
+        padding: 0.9rem 1rem;
+    }
+
+    .content-section {
+        padding: 1.5rem 2rem;
+    }
+
+    .file-list {
+        padding-bottom: 3rem;
+    }
+
+    .footer-links {
+        position: absolute;
+        top: 1.5rem;
+        bottom: auto;
+        left: 0;
+        transform: none;
+    }
+
+    .footer-links a {
+        width: auto;
+        height: auto;
+        padding: 6px 14px;
+        border-radius: 20px;
+        text-indent: 0;
+    }
+}
+
+/* Tablet (481px - 1024px) */
+@media (min-width: 481px) and (max-width: 1024px) {
+    body {
+        font-size: 16px;
+    }
+
+    .store-container {
+        padding: 0.75rem 1rem;
+    }
+
+    .store-header {
+        padding: 12px 16px;
+    }
+
+    .store-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .tab-btn {
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .content-section {
+        padding: 1rem 1.25rem;
+    }
+
+    .input-field {
+        padding: 14px;
+    }
+
+    .file-list {
+        padding-bottom: 5.5rem;
+    }
+
+    .footer-links {
+        bottom: 18px;
+    }
+
+    .footer-links a {
+        width: auto;
+        height: auto;
+        padding: 8px 12px;
+        border-radius: 999px;
+        text-indent: 0;
+    }
+
+    #link-feedback::before,
+    #link-support::before {
+        margin-right: 8px;
+    }
+}
+
+/* Small Screens (Max 900px) */
+@media (max-width: 900px) {
+    .store-container {
+        padding: 0.75rem;
+        min-height: 100vh;
+    }
+
+    .store-header {
+        padding: 0.8rem 0.75rem;
+        align-items: center;
+    }
+
+    .store-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .tabs {
+        position: sticky;
+        top: 56px;
+        z-index: 15;
+    }
+
+    .tab-btn {
+        padding: 0.7rem 0.5rem;
+        font-size: 1rem;
+    }
+
+    .content-section {
+        padding: 1rem;
+        padding-bottom: 8rem;
+        padding-top: 4rem;
+    }
+
+    .top-left-nav {
+        top: 0.9rem;
+        left: 0.7rem;
+        padding: 10px 14px;
+        font-size: 1rem;
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    .footer-links {
+        position: fixed;
+        top: 72px;
+        bottom: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        background: transparent;
+        gap: 0.6rem;
+        z-index: 40;
+        justify-content: center;
+        padding: 0 0.25rem;
+    }
+
+    .footer-links a {
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+        text-indent: -9999px;
+    }
+
+    .footer-links a.active-link {
+        text-indent: 0;
+        width: auto;
+        height: auto;
+        padding: 10px 14px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        color: var(--primary-orange);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .footer-links a.active-link::before {
+        margin-right: 6px;
+    }
+
+    #link-feedback::before {
+        content: "📝";
+        font-size: 1.3rem;
+        display: inline-block;
+    }
+
+    #link-support::before {
+        content: "🛠️";
+        font-size: 1.2rem;
+        display: inline-block;
+    }
+
+    .star-rating {
+        font-size: 1.6rem;
+        gap: 0.4rem;
+    }
+
+    .input-field {
+        padding: 14px;
+        font-size: 1rem;
+    }
+
+    .btn {
+        padding: 12px 18px;
+        font-size: 1rem;
+        border-radius: 30px;
+    }
+
+    .file-list {
+        padding-bottom: 6rem;
+    }
+}
+
+/* Mobile Layout (Max 600px) - Overrides 900px */
+@media (max-width: 600px) {
+    .store-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1rem;
+        gap: 15px;
+    }
+
+    .header-right {
+        width: 100%;
+        align-items: stretch !important;
+    }
+
+    .top-links {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        gap: 15px;
+        font-size: 0.85rem !important;
+    }
+
+    .header-actions {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 8px !important;
+    }
+
+    .files-toolbar {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 15px;
+    }
+
+    .files-toolbar>div {
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    #file-search {
+        width: 100% !important;
+        flex-grow: 1;
+    }
+
+    .export-bar {
+        justify-content: center !important;
+    }
+
+    .entry-container {
+        padding: 1.5rem;
+    }
+
+    .store-container {
+        margin: 1rem auto;
+        width: 98%;
+    }
+
+    .tab-btn {
+        padding: 0.8rem;
+        font-size: 1rem;
+    }
+
+    /* Feedback/Support Mobile Styles */
     .store-header .header-left {
         flex-wrap: wrap;
         gap: 8px !important;
@@ -1890,23 +1602,10 @@ body.dark-mode .form-group label {
         margin-bottom: 5px;
     }
 
-    .store-header .header-actions {
-        flex-wrap: wrap;
-        justify-content: center !important;
-        gap: 8px !important;
-    }
-
-    .store-header .top-links {
-        display: flex;
-        gap: 15px;
-        font-size: 0.85rem !important;
-    }
-
     .store-header .top-links a {
         margin-right: 0 !important;
     }
 
-    /* Form improvements for mobile */
     .form-group {
         margin-bottom: 1rem;
     }
@@ -1919,20 +1618,17 @@ body.dark-mode .form-group label {
         min-height: 100px;
     }
 
-    /* Star rating responsive sizing */
     .star-rating {
         gap: 0.4rem !important;
         font-size: 1.6rem !important;
     }
 
-    /* Submit button full width on mobile */
     .content-section .btn.primary {
         width: 100%;
         padding: 14px;
         font-size: 1rem;
     }
 
-    /* Feedback cards styling for mobile */
     .feedback-card {
         padding: 10px;
         margin-bottom: 10px;
@@ -1945,13 +1641,170 @@ body.dark-mode .form-group label {
     }
 }
 
+/* Smaller Mobile (Max 480px) - Overrides 600px */
 @media (max-width: 480px) {
+    body {
+        font-size: 15px;
+    }
 
-    /* Extra small screens */
-    .store-header h2 {
-        font-size: 1rem !important;
-        text-align: center;
+    .store-container {
         width: 100%;
+        margin: 0;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .store-header {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        padding: 1rem !important;
+        gap: 10px !important;
+    }
+
+    .store-header h2 {
+        font-size: 1.1rem;
+        width: 100%;
+        text-align: center;
+    }
+
+    .header-left {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 5px !important;
+    }
+
+    .header-back-btn {
+        margin-right: 0;
+        margin-bottom: 5px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .header-text {
+        text-align: center !important;
+    }
+
+    .header-right {
+        width: 100% !important;
+        align-items: center !important;
+        margin-top: 5px !important;
+    }
+
+    .top-links {
+        display: flex !important;
+        justify-content: center !important;
+        gap: 20px !important;
+        width: 100% !important;
+        margin-bottom: 5px !important;
+    }
+
+    .header-actions {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+        margin-top: 0 !important;
+    }
+
+    .files-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding: 10px !important;
+    }
+
+    .files-toolbar>div {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    #file-search {
+        width: 100% !important;
+        margin-bottom: 5px !important;
+    }
+
+    #btn-create-folder {
+        flex: 1 !important;
+        white-space: nowrap !important;
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+        height: auto !important;
+        min-height: 38px !important;
+    }
+
+    #btn-view-toggle {
+        height: 38px !important;
+        width: 38px !important;
+    }
+
+    .rich-text-toolbar {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        padding: 5px !important;
+        gap: 5px !important;
+    }
+
+    .btn-toolbar {
+        padding: 6px !important;
+        min-width: 32px !important;
+        font-size: 0.9rem !important;
+        text-shadow: none;
+        flex: 0 0 auto;
+    }
+
+    /* Fix weird artifacts */
+    button[title="Insert Table"] {
+        text-shadow: none !important;
+        filter: none !important;
+        animation: none !important;
+    }
+
+    label.btn-toolbar[title="Text Color"] {
+        width: 44px !important;
+        height: 44px !important;
+        overflow: hidden !important;
+        position: relative !important;
+    }
+
+    label.btn-toolbar[title="Text Color"] span {
+        font-size: 1.4rem !important;
+    }
+
+    .export-bar {
+        justify-content: center !important;
+        gap: 5px !important;
+        margin-top: 10px !important;
+    }
+
+    .export-bar .btn {
+        padding: 6px 10px !important;
+        font-size: 0.75rem !important;
+    }
+
+    .file-item {
+        padding: 10px !important;
+        flex-wrap: wrap !important;
+    }
+
+    .file-name {
+        font-size: 0.9rem !important;
+        width: 100% !important;
+        margin-bottom: 5px !important;
+    }
+
+    .file-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+        border-top: 1px solid #eee;
+        padding-top: 5px;
+    }
+
+    .btn-action {
+        padding: 6px !important;
+        font-size: 1.1rem !important;
     }
 
     .app-logo-small {
@@ -1959,16 +1812,95 @@ body.dark-mode .form-group label {
         height: 40px !important;
     }
 
+    .tab-btn {
+        padding: 0.7rem 0.5rem !important;
+        font-size: 0.85rem !important;
+    }
+
+    .content-section {
+        padding: 1rem;
+    }
+
+    .input-field {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    .modal-box {
+        max-width: 320px;
+    }
+
+    .btn.primary {
+        padding: 12px 16px;
+    }
+
     .star-rating {
+        gap: 0.35rem;
         font-size: 1.4rem !important;
+    }
+
+    .footer-links {
+        top: 68px;
+        bottom: auto;
     }
 
     .tabs {
         gap: 0;
     }
+}
+
+/* Tiny Devices (Max 420px) - Overrides 480px */
+@media (max-width: 420px) {
+    .top-left-nav {
+        padding: 12px 16px;
+        font-size: 1.05rem;
+    }
+
+    .store-header h2 {
+        font-size: 1.05rem;
+    }
+
+    .tabs {
+        top: 56px;
+    }
+
+    .star-rating {
+        font-size: 1.4rem;
+    }
 
     .tab-btn {
-        padding: 0.7rem 0.5rem !important;
+        font-size: 0.95rem;
+        padding: 0.6rem 0.4rem;
+    }
+
+    .entry-container {
+        padding: 1.5rem;
+        width: 100%;
+    }
+}
+
+/* Micro Devices (Max 320px) - Overrides 420px */
+@media (max-width: 320px) {
+    .store-header h2 {
+        font-size: 1.1rem !important;
+    }
+
+    .tab-btn {
+        padding: 0.6rem !important;
         font-size: 0.85rem !important;
+    }
+
+    .rich-text-area {
+        height: 250px !important;
+    }
+
+    .btn {
+        padding: 8px 15px !important;
+        font-size: 0.85rem !important;
+    }
+
+    .app-logo {
+        width: 50px !important;
+        height: 50px !important;
     }
 }
