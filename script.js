@@ -309,6 +309,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Helper for Excel Columns (A, B, ... AA)
+    function getColumnLabel(index) {
+        let label = '';
+        index++;
+        while (index > 0) {
+            let rem = (index - 1) % 26;
+            label = String.fromCharCode(65 + rem) + label;
+            index = Math.floor((index - 1) / 26);
+        }
+        return label;
+    }
+
     window.insertTable = (btn) => {
         // Visual Feedback
         if (btn) {
@@ -316,50 +328,39 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => btn.classList.remove('active'), 200);
         }
 
-        showPrompt("Enter number of rows:", (rows) => {
-            if (!rows || isNaN(rows) || rows < 1) {
-                closeModal();
-                return;
+        // Default "Full Table Format" (Large Sheet)
+        // User requested "countless", so we provide a very large instance
+        const rows = 200;
+        const cols = 15;
+
+        // Generate Excel Table HTML
+        let tableHTML = `<table class="excel-table">`;
+
+        // Header Row (A, B, C...)
+        tableHTML += `<thead><tr><th style="background:#e8e8e8;"></th>`; // Top-left corner
+        for (let k = 0; k < cols; k++) {
+            tableHTML += `<th contenteditable="false">${getColumnLabel(k)}</th>`;
+        }
+        tableHTML += `</tr></thead><tbody>`;
+
+        // Data Rows with Indices (1, 2, 3...)
+        for (let i = 0; i < rows; i++) {
+            tableHTML += `<tr>`;
+            // Row Number Header
+            tableHTML += `<td class="excel-row-header" contenteditable="false">${i + 1}</td>`;
+            // Empty Format Cells
+            for (let j = 0; j < cols; j++) {
+                tableHTML += `<td></td>`;
             }
-            showPrompt("Enter number of columns:", (cols) => {
-                if (!cols || isNaN(cols) || cols < 1) {
-                    closeModal();
-                    return;
-                }
+            tableHTML += `</tr>`;
+        }
 
-                showPrompt("Enter Column Headers (comma separated):", (headerStr) => {
+        tableHTML += `</tbody></table><p><br/></p>`;
 
-                    let tableHTML = `<table style="border-collapse: collapse; width: 100%; margin: 10px 0; border: 1px solid #ccc;">`;
-
-                    // Header Logic
-                    if (headerStr && headerStr.trim() !== '') {
-                        const headers = headerStr.split(',').map(h => h.trim());
-                        tableHTML += `<thead><tr>`;
-                        // Loop up to 'cols' count. Use provided header or empty if not enough headers provided.
-                        for (let k = 0; k < cols; k++) {
-                            const hText = headers[k] || `Col ${k + 1}`;
-                            tableHTML += `<th style="border: 1px solid #ccc; padding: 8px; background-color: #f4f4f4; text-align: left;">${hText}</th>`;
-                        }
-                        tableHTML += `</tr></thead>`;
-                    }
-
-                    tableHTML += `<tbody>`;
-
-                    for (let i = 0; i < rows; i++) {
-                        tableHTML += `<tr>`;
-                        for (let j = 0; j < cols; j++) {
-                            tableHTML += `<td style="border: 1px solid #ccc; padding: 8px; min-width: 50px;">&nbsp;</td>`;
-                        }
-                        tableHTML += `</tr>`;
-                    }
-
-                    tableHTML += `</tbody></table><p><br/></p>`; // Add break after table
-
-                    document.getElementById('note-area').focus();
-                    document.execCommand('insertHTML', false, tableHTML);
-                }, true); // Last one closes
-            }, false); // Don't close
-        }, false); // Don't close
+        document.getElementById('note-area').focus();
+        document.execCommand('insertHTML', false, tableHTML);
+        // Dispatch input event to ensure autosave catches the new table
+        document.getElementById('note-area').dispatchEvent(new Event('input'));
     };
 
     function updateToolbarState() {

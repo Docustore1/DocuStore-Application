@@ -275,6 +275,68 @@ body {
     padding: 8px;
 }
 
+/* Excel-like Table Styles */
+.excel-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    margin: 1rem 0;
+    table-layout: fixed;
+}
+
+.excel-table th {
+    background-color: #f8f9fa;
+    border: 1px solid #d1d1d1;
+    font-weight: 600;
+    color: #555;
+    text-align: center;
+    padding: 6px;
+    user-select: none;
+    position: relative;
+    min-width: 40px;
+}
+
+/* Row Headers (1, 2, 3...) */
+.excel-table td.excel-row-header {
+    background-color: #f8f9fa;
+    border: 1px solid #d1d1d1;
+    text-align: center;
+    color: #555;
+    font-weight: 600;
+    width: 40px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Cells */
+.excel-table td:not(.excel-row-header) {
+    border: 1px solid #e0e0e0;
+    padding: 6px 8px;
+    background: #fff;
+    min-width: 80px;
+    outline: none;
+}
+
+.excel-table td:not(.excel-row-header):focus {
+    border: 2px solid var(--primary-orange);
+    z-index: 10;
+}
+
+/* Dark Mode Excel Table */
+body.dark-mode .excel-table th,
+body.dark-mode .excel-table td.excel-row-header {
+    background-color: #333;
+    border-color: #555;
+    color: #ccc;
+}
+
+body.dark-mode .excel-table td:not(.excel-row-header) {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #fff;
+}
+
 /* Dark Mode Modals */
 body.dark-mode .modal-box {
     background: #2a2a2a;
@@ -1461,6 +1523,27 @@ body.dark-mode .folder-icon-svg {
         padding: 6px !important;
         min-width: 32px !important;
         font-size: 0.9rem !important;
+        text-shadow: none;
+        /* Global fix for toolbars */
+    }
+
+    /* Fix potential visual glitch on Table button explicitly */
+    button[title="Insert Table"] {
+        text-shadow: none !important;
+        filter: none !important;
+        animation: none !important;
+    }
+
+    /* Mobile Color Picker Fix */
+    label.btn-toolbar[title="Text Color"] {
+        width: 44px !important;
+        height: 44px !important;
+        overflow: hidden !important;
+        position: relative !important;
+    }
+
+    label.btn-toolbar[title="Text Color"] span {
+        font-size: 1.4rem !important;
     }
 
     .export-bar {
