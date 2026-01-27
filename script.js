@@ -1364,8 +1364,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Visual update
                     stars.forEach(s => {
-                        if (parseInt(s.getAttribute('data-value')) <= val) s.style.color = 'orange';
-                        else s.style.color = '#ccc';
+                        // Reset inline color if any
+                        s.style.color = '';
+                        if (parseInt(s.getAttribute('data-value')) <= val) {
+                            s.classList.add('selected');
+                        } else {
+                            s.classList.remove('selected');
+                        }
                     });
                 });
             });
