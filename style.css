@@ -241,8 +241,30 @@ body {
 
 .content-section.active {
     display: flex;
+    overflow-y: auto;
+    /* Ensure scrolling works properly */
+    max-height: calc(100vh - 150px);
+    /* Adjust based on header/tabs height to fit in view */
+    position: relative;
 }
 
+/* Make export bar sticky */
+.export-bar {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .export-bar {
+    background: #333;
+    border-color: #444;
+}
+
+/* Write Section */
 /* Write Section */
 .rich-text-area {
     width: 100%;
@@ -254,7 +276,8 @@ body {
     border-top: none;
     font-family: inherit;
     font-size: 1rem;
-    overflow-y: auto;
+    overflow: auto;
+    /* Allow BOTH x and y scrolling */
     background: #fff;
     outline: none;
     min-height: 300px;
@@ -278,7 +301,10 @@ body {
 /* Excel-like Table Styles */
 .excel-table {
     border-collapse: collapse;
-    width: 100%;
+    width: max-content;
+    /* Allow table to grow beyond container width */
+    min-width: 100%;
+    /* At least full width */
     font-family: 'Segoe UI', Arial, sans-serif;
     font-size: 14px;
     margin: 1rem 0;
@@ -297,6 +323,25 @@ body {
     min-width: 40px;
 }
 
+/* Column Resizer Handle */
+.resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 20;
+    /* Invisible target area by default */
+}
+
+.resizer:hover,
+.resizing {
+    border-right: 2px solid var(--primary-orange);
+    /* Visible line on hover/drag */
+}
+
 /* Row Headers (1, 2, 3...) */
 .excel-table td.excel-row-header {
     background-color: #f8f9fa;
@@ -310,17 +355,38 @@ body {
 }
 
 /* Cells */
+/* Cells */
 .excel-table td:not(.excel-row-header) {
     border: 1px solid #e0e0e0;
     padding: 6px 8px;
     background: #fff;
     min-width: 80px;
     outline: none;
+    position: relative;
+    /* Needed for handle positioning */
 }
 
 .excel-table td:not(.excel-row-header):focus {
-    border: 2px solid var(--primary-orange);
+    border: 2px solid #1a73e8;
+    /* Sheets Blue */
     z-index: 10;
+    box-shadow: 0 0 0 1px rgba(26, 115, 232, 0.2);
+}
+
+/* The "Fill Handle" Square */
+.excel-table td:not(.excel-row-header):focus::after {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    background-color: #1a73e8;
+    bottom: -4px;
+    right: -4px;
+    border: 1px solid #fff;
+    cursor: crosshair;
+    z-index: 11;
+    pointer-events: none;
+    /* purely visual for now */
 }
 
 /* Dark Mode Excel Table */

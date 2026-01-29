@@ -259,6 +259,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // New Format: Check if content seems to be HTML (starts with <)
             // Ideally we just set innerHTML. Old plain text will format fine.
             noteArea.innerHTML = savedNote;
+            // Attach observers to any loaded tables
+            setTimeout(() => {
+                if (window.refreshTableObservers) window.refreshTableObservers();
+            }, 500);
         }
 
         noteArea.addEventListener('input', () => {
@@ -321,6 +325,115 @@ document.addEventListener('DOMContentLoaded', () => {
         return label;
     }
 
+    // --- Column Resizing Logic ---
+    function enableResizers(table) {
+        if (!table) return;
+        const cols = table.querySelectorAll('th');
+        cols.forEach(col => {
+            // Check if already has resizer
+            if (col.querySelector('.resizer')) return;
+
+            // Skip the top-left corner cell if empty/special
+            if (!col.innerText && col === table.querySelector('th')) return;
+
+            const resizer = document.createElement('div');
+            resizer.classList.add('resizer');
+            resizer.contentEditable = "false";
+            col.appendChild(resizer);
+            createResizableColumn(col, resizer);
+        });
+    }
+
+    function createResizableColumn(col, resizer) {
+        let x = 0;
+        let w = 0;
+
+        const mouseDownHandler = function (e) {
+            x = e.clientX;
+
+            const styles = window.getComputedStyle(col);
+            w = parseInt(styles.width, 10);
+
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            resizer.classList.add('resizing');
+        };
+
+        const mouseMoveHandler = function (e) {
+            const dx = e.clientX - x;
+            col.style.width = `${w + dx}px`;
+        };
+
+        const mouseUpHandler = function () {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            resizer.classList.remove('resizing');
+        };
+
+        resizer.addEventListener('mousedown', mouseDownHandler);
+    }
+
+    // --- Infinite Scroll Logic for Tables ---
+    // Increase Columns to 26 (A-Z)
+    const MAX_COLS = 26;
+
+    function attachTableObserver(table) {
+        if (!table) return;
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        // Configuration for Observer
+        const options = {
+            root: null, // viewport
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const row = entry.target;
+                    obs.unobserve(row); // Stop watching this row
+                    appendMoreRows(table, tbody, 50); // Add 50 more rows
+                }
+            });
+        }, options);
+
+        // Observer the LAST row
+        const lastRow = tbody.lastElementChild;
+        if (lastRow) {
+            observer.observe(lastRow);
+        }
+    }
+
+    function appendMoreRows(table, tbody, count) {
+        let lastNum = 0;
+        const lastHeader = tbody.querySelector('tr:last-child .excel-row-header');
+        if (lastHeader) {
+            lastNum = parseInt(lastHeader.innerText) || 0;
+        }
+
+        let html = '';
+        // Assume same number of columns as header
+        const colCount = table.querySelectorAll('thead th').length - 1; // -1 for row-header col
+
+        for (let i = 1; i <= count; i++) {
+            const rowNum = lastNum + i;
+            html += `<tr><td class="excel-row-header" contenteditable="false">${rowNum}</td>`;
+            for (let j = 0; j < colCount; j++) {
+                html += `<td></td>`;
+            }
+            html += `</tr>`;
+        }
+
+        // Append HTML effectively
+        // insertAdjacentHTML is better than innerHTML += to avoid breaking listeners/focus
+        tbody.insertAdjacentHTML('beforeend', html);
+
+        // Re-attach observer to NEW last row
+        attachTableObserver(table);
+    }
+
     window.insertTable = (btn) => {
         // Visual Feedback
         if (btn) {
@@ -345,10 +458,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Default "Full Table Format" (Large Sheet)
-        // User requested "countless", so we provide a very large instance
-        const rows = 200;
-        const cols = 15;
+        const rows = 100; // Start with 100
+        const cols = MAX_COLS; // 26 Columns (A-Z)
 
         // Generate Excel Table HTML
         let tableHTML = `<table class="excel-table">`;
@@ -363,10 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Data Rows with Indices (1, 2, 3...)
         for (let i = 0; i < rows; i++) {
             tableHTML += `<tr>`;
-            // Row Number Header
-            // Use startRow + i for dynamic numbering
             tableHTML += `<td class="excel-row-header" contenteditable="false">${startRow + i}</td>`;
-            // Empty Format Cells
             for (let j = 0; j < cols; j++) {
                 tableHTML += `<td></td>`;
             }
@@ -377,8 +485,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('note-area').focus();
         document.execCommand('insertHTML', false, tableHTML);
+
+        // IMPORTANT: After insertion, find the table and attach observer and resizers
+        // We need a short delay because execCommand is async-like in DOM updates sometimes
+        setTimeout(() => {
+            const tables = document.querySelectorAll('.excel-table');
+            if (tables.length > 0) {
+                // Attach to the last inserted table (likely the last one in DOM)
+                const newTable = tables[tables.length - 1];
+                attachTableObserver(newTable);
+                enableResizers(newTable);
+            }
+        }, 100);
+
         // Dispatch input event to ensure autosave catches the new table
         document.getElementById('note-area').dispatchEvent(new Event('input'));
+    };
+
+    // Attach observers to existing tables on load
+    document.addEventListener('DOMContentLoaded', () => {
+        // This block waits for main DOM, but note-area content might be loaded later from localStorage.
+        // Effectively we hook into the existing load logic.
+        // We'll add a helper that checks periodically or hooks into logic.
+    });
+
+    // We can also expose a refinisher for loaded content
+    window.refreshTableObservers = () => {
+        const tables = document.querySelectorAll('.excel-table');
+        tables.forEach(table => {
+            attachTableObserver(table);
+            enableResizers(table);
+        });
     };
 
     function updateToolbarState() {
