@@ -1598,8 +1598,42 @@ body.dark-mode .folder-icon-svg {
 
     .tab-btn {
         padding: 0.6rem !important;
-        font-size: 0.85rem !important;
     }
+
+    /* Grid View Fixes for Mobile */
+    .file-list.grid-view .file-item {
+        height: auto !important;
+        min-height: 190px !important;
+        justify-content: flex-start !important;
+        padding-bottom: 50px !important;
+        /* Space for actions */
+    }
+
+    .file-list.grid-view .file-actions {
+        position: absolute !important;
+        bottom: 10px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        opacity: 1 !important;
+        width: 90% !important;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 6px !important;
+        display: flex !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        z-index: 20;
+    }
+
+    .file-list.grid-view .file-name {
+        max-height: none !important;
+        -webkit-line-clamp: 3 !important;
+        /* Allow more lines */
+        margin-bottom: 10px !important;
+    }
+
 
     .rich-text-area {
         height: 250px !important;
