@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebas
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
 import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, setDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-storage.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
 // Configuration
 const firebaseConfig = {
@@ -34,6 +34,7 @@ window.fbSignUp = (email, password) => createUserWithEmailAndPassword(auth, emai
 window.fbSignIn = (email, password) => signInWithEmailAndPassword(auth, email, password);
 window.fbSignOut = () => signOut(auth);
 window.fbOnAuthStateChanged = (callback) => onAuthStateChanged(auth, callback);
+window.fbResetPassword = (email) => sendPasswordResetEmail(auth, email);
 
 // --- Helper Functions (Exposed) ---
 

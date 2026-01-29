@@ -16,25 +16,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.fbOnAuthStateChanged(async (user) => {
             if (user) {
+                // Play welcome voice if flag is set
+                if (localStorage.getItem('docStore_playWelcome')) {
+                    const speakWelcome = () => {
+                        const utterance = new SpeechSynthesisUtterance("Welcome to DocuStore");
+                        utterance.rate = 0.8;
+                        const voices = window.speechSynthesis.getVoices();
+                        const femaleVoice = voices.find(v => v.name.includes('Zira') || v.name.includes('Google US English') || v.name.toLowerCase().includes('female'));
+                        if (femaleVoice) utterance.voice = femaleVoice;
+
+                        window.speechSynthesis.speak(utterance);
+                        localStorage.removeItem('docStore_playWelcome');
+                        window.speechSynthesis.onvoiceschanged = null;
+                    };
+
+                    if (window.speechSynthesis.getVoices().length === 0) {
+                        window.speechSynthesis.onvoiceschanged = speakWelcome;
+                    } else {
+                        speakWelcome();
+                    }
+                }
+
                 console.log("👤 User Logged In:", user.email);
 
                 const settings = await window.fbLoadSettings();
                 const hasProfile = settings && settings.collegeName;
 
-                // 1. If Profile Complete -> Go to Store (if on entry or details)
-                if (hasProfile) {
-                    if (window.location.pathname.endsWith('entry.html') ||
-                        window.location.pathname.endsWith('index.html') ||
-                        window.location.pathname.endsWith('details.html')) {
-                        window.location.href = 'store.html';
-                    }
-                }
-                // 2. If Profile Incomplete -> Go to Details (if on entry)
-                else {
-                    if (window.location.pathname.endsWith('entry.html') ||
-                        window.location.pathname.endsWith('index.html')) {
-                        window.location.href = 'details.html';
-                    }
+                // 1. If Logged In -> Go to Store (if on entry)
+                if (window.location.pathname.endsWith('entry.html') ||
+                    window.location.pathname.endsWith('index.html')) {
+                    window.location.href = 'store.html';
                 }
 
                 // Update UI in Store (if exists)
@@ -64,8 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Protected route protection: Redirect to entry
                 if (window.location.pathname.endsWith('store.html') ||
                     window.location.pathname.endsWith('feedback.html') ||
-                    window.location.pathname.endsWith('support.html') ||
-                    window.location.pathname.endsWith('details.html')) {
+                    window.location.pathname.endsWith('support.html')) {
                     window.location.href = 'entry.html';
                 }
             }
@@ -94,17 +104,85 @@ document.addEventListener('DOMContentLoaded', () => {
     const passInput = document.getElementById('auth-password');
     let isSignupMode = false;
 
+    const forgotPwdBtn = document.getElementById('auth-forgot-password');
+    const pwdToggleBtn = document.getElementById('btn-toggle-password');
+
+    if (pwdToggleBtn && passInput) {
+        pwdToggleBtn.addEventListener('click', () => {
+            const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passInput.setAttribute('type', type);
+            pwdToggleBtn.textContent = type === 'password' ? '🙈' : '👁️';
+            pwdToggleBtn.title = type === 'password' ? 'Show Password' : 'Hide Password';
+        });
+    }
+
+    // Auto-switch to stored state
+    if (!localStorage.getItem('docStore_hasAccount')) {
+        // First time user -> Sign Up
+        isSignupMode = true;
+
+        // Wait for DOM or just toggle immediately since we are in DOMContentLoaded
+        setTimeout(() => {
+            const detailsDiv = document.getElementById('signup-details');
+            if (authTitle) authTitle.textContent = "Sign Up";
+            if (authBtn) authBtn.textContent = "Create Account";
+            if (authToggle) authToggle.textContent = "Already have an account? Login";
+            if (detailsDiv) detailsDiv.style.display = 'block';
+            if (forgotPwdBtn) forgotPwdBtn.style.display = 'none';
+        }, 50);
+    }
+
     if (authToggle) {
         authToggle.addEventListener('click', () => {
             isSignupMode = !isSignupMode;
+            const detailsDiv = document.getElementById('signup-details');
+
             if (isSignupMode) {
                 authTitle.textContent = "Sign Up";
                 authBtn.textContent = "Create Account";
                 authToggle.textContent = "Already have an account? Login";
+                if (detailsDiv) detailsDiv.style.display = 'block';
+                if (forgotPwdBtn) forgotPwdBtn.style.display = 'none';
             } else {
                 authTitle.textContent = "Login";
                 authBtn.textContent = "Login";
                 authToggle.textContent = "Don't have an account? Sign Up";
+                if (detailsDiv) detailsDiv.style.display = 'none';
+                if (forgotPwdBtn) forgotPwdBtn.style.display = 'block';
+            }
+        });
+    }
+
+    if (forgotPwdBtn) {
+        forgotPwdBtn.addEventListener('click', async () => {
+            let email = emailInput.value.trim();
+
+            const sendReset = async (emailAddr) => {
+                if (!emailAddr) return;
+                // Email format validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(emailAddr)) {
+                    showModal("Please enter a valid email address.");
+                    return;
+                }
+
+                try {
+                    await window.fbResetPassword(emailAddr);
+                    showModal(`Password reset email sent to ${emailAddr}`);
+                } catch (err) {
+                    showModal("Error: " + err.message);
+                }
+            };
+
+            if (!email) {
+                // Try to use the custom prompt if available
+                if (typeof showPrompt === 'function') {
+                    showPrompt("Enter your email for password reset:", (e) => sendReset(e));
+                } else {
+                    showModal("Please enter your email in the box first.");
+                }
+            } else {
+                sendReset(email);
             }
         });
     }
@@ -133,14 +211,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Additional Signup Validation
+            if (isSignupMode) {
+                const cName = document.getElementById('signup-college-name').value;
+                const uName = document.getElementById('signup-user-name').value;
+                const uRole = document.getElementById('signup-user-role').value;
+                const crs = document.getElementById('signup-courses').value;
+                const cAddr = document.getElementById('signup-college-address').value;
+
+                if (!cName || !uName || !uRole || !crs || !cAddr) {
+                    showModal("Please fill in all college details.");
+                    return;
+                }
+            }
+
             try {
                 authBtn.disabled = true; authBtn.textContent = "Processing...";
                 if (isSignupMode) {
                     await window.fbSignUp(email, password);
-                    showModal("Account created! Please complete your profile.");
+
+                    // Save Details immediately
+                    const collegeName = document.getElementById('signup-college-name').value;
+                    const userName = document.getElementById('signup-user-name').value;
+                    const userRole = document.getElementById('signup-user-role').value;
+                    const courses = document.getElementById('signup-courses').value;
+                    const collegeAddress = document.getElementById('signup-college-address').value;
+                    const erpName = document.getElementById('signup-erp-name').value;
+
+                    await window.fbSaveSettings({ collegeName, userName, userRole, courses, collegeAddress, erpName, password });
+
+                    // Set local storage
+                    localStorage.setItem('docStore_collegeName', collegeName);
+                    localStorage.setItem('docStore_userName', userName);
+                    localStorage.setItem('docStore_userRole', userRole);
+                    localStorage.setItem('docStore_hasAccount', 'true');
+                    localStorage.setItem('docStore_playWelcome', 'true');
+
+                    // Redirect to store
+                    window.location.href = 'store.html';
                 }
                 else {
                     await window.fbSignIn(email, password);
+                    localStorage.setItem('docStore_hasAccount', 'true');
+                    localStorage.setItem('docStore_playWelcome', 'true');
                 }
             } catch (err) {
                 let errorMsg = err.message;
@@ -221,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     await window.fbSignOut();
                     localStorage.clear();
+                    localStorage.setItem('docStore_hasAccount', 'true');
                     window.location.href = 'entry.html';
                 } catch (err) {
                     showModal("Logout Failed: " + err.message);
@@ -1868,86 +1982,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Export Note to PDF - Global
+    // Export Note to PDF - Global
     window.saveNoteToPDF = async function () {
-        const noteContent = document.getElementById('note-area').innerText;
-        if (!noteContent.trim()) {
+        const element = document.getElementById('note-area');
+        if (!element.innerText.trim() && !element.innerHTML.includes('<img')) {
             window.showModal('Note is empty.');
             return;
         }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        // A4 size: 210mm x 297mm
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
 
-        const margin = 10;
-        const pageHeight = doc.internal.pageSize.height;
-        const pageWidth = doc.internal.pageSize.width;
-        const maxLineWidth = pageWidth - margin * 2;
+        // Use .html() method specifically to capture layout/tables
+        // Requires html2canvas (added to store.html)
+        await doc.html(element, {
+            callback: function (doc) {
+                const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
+                doc.save(fileName);
 
-        const lines = doc.splitTextToSize(noteContent, maxLineWidth);
+                // Create Blob for Store
+                const pdfBlob = doc.output('blob');
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-        let y = 10;
-        lines.forEach(line => {
-            if (y > pageHeight - 10) {
-                doc.addPage();
-                y = 10;
-            }
-            doc.text(line, margin, y);
-            y += 10;
+                document.dispatchEvent(new CustomEvent('save-note-file', {
+                    detail: { file: file, parentId: 'current' }
+                }));
+
+                window.showModal('PDF Downloaded & Saved to Store!');
+            },
+            x: 10,
+            y: 10,
+            width: 190, // target width in the PDF document
+            windowWidth: 800, // window width in CSS pixels
+            autoPaging: 'text' // try to split text nicely
         });
-
-        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
-        doc.save(fileName);
-
-        const pdfBlob = doc.output('blob');
-        const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-        document.dispatchEvent(new CustomEvent('save-note-file', {
-            detail: { file: file, parentId: 'current' }
-        }));
-
-        window.showModal('PDF Downloaded & Saved to Store!');
     };
 
 
     // Export Note to Word - Global
     window.saveNoteToWord = function () {
-        const noteContent = document.getElementById('note-area').innerText;
-        if (!noteContent.trim()) {
+        const noteContent = document.getElementById('note-area').innerHTML;
+        if (!document.getElementById('note-area').innerText.trim()) {
             window.showModal('Note is empty.');
             return;
         }
 
-        const doc = new docx.Document({
-            sections: [{
-                properties: {},
-                children: [
-                    new docx.Paragraph({
-                        children: [
-                            new docx.TextRun(noteContent),
-                        ],
-                    }),
-                ],
-            }],
-        });
+        // HTML Blob Method for Word (Best for Tables)
+        // We inject CSS to ensure borders show up in Word
+        const css = `
+            <style>
+                body { font-family: 'Calibri', sans-serif; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+                td, th { border: 1px solid #000; padding: 8px; vertical-align: top; }
+                .excel-table { width: 100%; margin: 10px 0; border: 1px solid #000; }
+                .excel-row-header { background: #f0f0f0; font-weight: bold; }
+                img { max-width: 100%; height: auto; }
+            </style>
+        `;
 
-        docx.Packer.toBlob(doc).then(blob => {
-            const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.docx`;
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            document.body.appendChild(a);
-            a.style = "display: none";
-            a.href = url;
-            a.download = fileName;
-            a.click();
-            window.URL.revokeObjectURL(url);
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset="utf-8">
+                <title>Export</title>
+                ${css}
+            </head>
+            <body>
+                ${noteContent}
+            </body>
+            </html>
+        `;
 
-            const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            document.dispatchEvent(new CustomEvent('save-note-file', {
-                detail: { file: file, parentId: 'current' }
-            }));
+        const blob = new Blob([htmlContent], { type: 'application/msword' });
+        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.doc`;
 
-            window.showModal('Word Doc Downloaded & Saved to Store!');
-        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        // Save to internal store
+        const file = new File([blob], fileName, { type: 'application/msword' });
+        document.dispatchEvent(new CustomEvent('save-note-file', {
+            detail: { file: file, parentId: 'current' }
+        }));
+
+        window.showModal('Word Doc Downloaded & Saved to Store!');
     };
 
 

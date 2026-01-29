@@ -780,17 +780,41 @@ body.dark-mode #chosen-color-preview {
 /* Form Styles */
 .form-group {
     margin-bottom: 1.5rem;
+    position: relative;
 }
 
 .input-field {
     width: 100%;
     padding: 12px 15px;
+    padding-right: 40px;
+    /* Space for eye icon */
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 1rem;
     font-family: inherit;
     outline-color: var(--primary-orange);
     background-color: #f9f9f9;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    user-select: none;
+}
+
+.password-toggle:hover {
+    color: var(--primary-orange);
 }
 
 .input-field:focus {
