@@ -606,6 +606,35 @@ body.dark-mode .modal-box h3 {
     margin-bottom: 5px;
 }
 
+/* Color Picker Styles */
+.color-swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.color-swatch:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.color-swatch.selected {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--primary-orange);
+}
+
+/* Dark Mode Color Picker Adjustments */
+body.dark-mode .modal-box .color-grid button {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode #chosen-color-preview {
+    border-color: #555 !important;
+}
+
 .file-list.grid-view .file-actions {
     position: absolute;
     bottom: 10px;

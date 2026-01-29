@@ -638,6 +638,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Color Picker Logic ---
+    let currentSelectedColor = '#000000'; // Default
+    const colorPickerModal = document.getElementById('color-picker-modal');
+
+    window.openColorPicker = () => {
+        if (colorPickerModal) {
+            colorPickerModal.classList.add('active');
+            // Reset selection if needed, or keep last
+            selectColor(currentSelectedColor);
+        }
+    };
+
+    window.closeColorPicker = () => {
+        if (colorPickerModal) colorPickerModal.classList.remove('active');
+    };
+
+    window.selectColor = (color) => {
+        currentSelectedColor = color;
+        document.getElementById('chosen-color-preview').style.background = color;
+
+        // Highlight swatch if matches preset
+        const swatches = document.querySelectorAll('.color-swatch');
+        swatches.forEach(swatch => {
+            swatch.classList.remove('selected');
+            // Simple check if inline style matches
+            if (swatch.style.background === color || swatch.style.backgroundColor === color) {
+                swatch.classList.add('selected');
+            }
+        });
+
+        // If custom input triggered this, ensure preview updates
+        // (Handled by the preview div background update above)
+    };
+
+    window.applySelectedColor = () => {
+        window.formatText('foreColor', currentSelectedColor);
+        closeColorPicker();
+    };
+
     // --- Real-time Search Logic ---
     const searchInput = document.getElementById('file-search');
     if (searchInput) {
