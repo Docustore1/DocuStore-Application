@@ -1,0 +1,14 @@
+/* Ensure ALL table cells have borders in PDF export */
+body.generating-pdf .excel-table td {
+    border: 1px solid #000 !important;
+}
+
+body.generating-pdf .excel-table th {
+    border: 1px solid #000 !important;
+    background-color: #f0f0f0 !important; /* Lighter header for print */
+    color: #000 !important;
+}
+
+body.generating-pdf .excel-table {
+    margin-bottom: 20px !important;
+}

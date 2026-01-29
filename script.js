@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 1; i <= count; i++) {
             const rowNum = lastNum + i;
-            html += `<tr><td class="excel-row-header" contenteditable="false">${rowNum}</td>`;
+            html += `<tr><td class="excel-row-header" contenteditable="false" style="position: relative;">${rowNum}<div class="row-resizer" contenteditable="false"></div></td>`;
             for (let j = 0; j < colCount; j++) {
                 html += `<td></td>`;
             }
@@ -547,6 +547,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Re-attach observer to NEW last row
         attachTableObserver(table);
     }
+
+
 
     window.insertTable = (btn) => {
         // Visual Feedback
@@ -581,14 +583,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Header Row (A, B, C...)
         tableHTML += `<thead><tr><th style="background:#e8e8e8;"></th>`; // Top-left corner
         for (let k = 0; k < cols; k++) {
-            tableHTML += `<th contenteditable="false">${getColumnLabel(k)}</th>`;
+            tableHTML += `<th contenteditable="false" style="position: relative;">${getColumnLabel(k)}<div class="resizer" contenteditable="false"></div></th>`;
         }
         tableHTML += `</tr></thead><tbody>`;
 
         // Data Rows with Indices (1, 2, 3...)
         for (let i = 0; i < rows; i++) {
             tableHTML += `<tr>`;
-            tableHTML += `<td class="excel-row-header" contenteditable="false">${startRow + i}</td>`;
+            tableHTML += `<td class="excel-row-header" contenteditable="false" style="position: relative;">${startRow + i}<div class="row-resizer" contenteditable="false"></div></td>`;
             for (let j = 0; j < cols; j++) {
                 tableHTML += `<td></td>`;
             }
@@ -615,6 +617,76 @@ document.addEventListener('DOMContentLoaded', () => {
         // Dispatch input event to ensure autosave catches the new table
         document.getElementById('note-area').dispatchEvent(new Event('input'));
     };
+
+    // --- Column Resizing Logic (Global Delegation) ---
+    document.addEventListener('mousedown', function (e) {
+        // Column Resizing
+        if (e.target.classList.contains('resizer')) {
+            const resizer = e.target;
+            const th = resizer.parentElement;
+            const startX = e.pageX;
+            const startWidth = th.offsetWidth;
+
+            resizer.classList.add('resizing');
+
+            const onMouseMove = (moveEvent) => {
+                const newWidth = startWidth + (moveEvent.pageX - startX);
+                if (newWidth > 30) {
+                    th.style.width = newWidth + 'px';
+                    th.style.minWidth = newWidth + 'px';
+                }
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                resizer.classList.remove('resizing');
+
+                const noteArea = document.getElementById('note-area');
+                if (noteArea) noteArea.dispatchEvent(new Event('input'));
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Row Resizing
+        if (e.target.classList.contains('row-resizer')) {
+            const resizer = e.target;
+            const td = resizer.parentElement;
+            const tr = td.parentElement;
+            const startY = e.pageY;
+            const startHeight = tr.offsetHeight;
+
+            resizer.classList.add('resizing');
+
+            const onMouseMove = (moveEvent) => {
+                const newHeight = startHeight + (moveEvent.pageY - startY);
+                if (newHeight > 20) {
+                    tr.style.height = newHeight + 'px';
+                }
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                resizer.classList.remove('resizing');
+
+                const noteArea = document.getElementById('note-area');
+                if (noteArea) noteArea.dispatchEvent(new Event('input'));
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
+
+    // Legacy support (safe no-op as we use global delegation)
+    window.enableResizers = function (table) { };
 
     // Attach observers to existing tables on load
     document.addEventListener('DOMContentLoaded', () => {
@@ -754,23 +826,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Color Picker Logic ---
     let currentSelectedColor = '#000000'; // Default
+    let currentStickyColor = null; // Active "pen" color tracking
     const colorPickerModal = document.getElementById('color-picker-modal');
 
     let savedSelection = null;
 
+    // --- Improved Text Selection Handling ---
     function saveSelection() {
         const sel = window.getSelection();
         if (sel.rangeCount > 0) {
-            savedSelection = sel.getRangeAt(0);
+            const range = sel.getRangeAt(0);
+            const noteArea = document.getElementById('note-area');
+            // Only save if the selection is within the note editor
+            if (noteArea && noteArea.contains(range.commonAncestorContainer)) {
+                savedSelection = range;
+            }
         }
     }
 
     function restoreSelection() {
-        if (savedSelection) {
+        const noteArea = document.getElementById('note-area');
+        if (savedSelection && noteArea) {
+            noteArea.focus(); // Ensure focus returns
             const sel = window.getSelection();
             sel.removeAllRanges();
             sel.addRange(savedSelection);
         }
+    }
+
+    // Capture selection state frequently
+    // Capture selection state frequently
+    if (noteArea) {
+        // Save selection on blur (before focus is lost to buttons)
+        noteArea.addEventListener('blur', saveSelection);
+        // Also save on mouseup/keyup to have the very latest
+        noteArea.addEventListener('mouseup', saveSelection);
+        noteArea.addEventListener('keyup', saveSelection);
     }
 
     window.openColorPicker = () => {
@@ -779,9 +870,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (colorPickerModal.classList.contains('active')) {
                 colorPickerModal.classList.remove('active');
             } else {
-                saveSelection(); // Save where the user was typing/selecting
+                saveSelection(); // Try to capture one last time
+
+                // Smart Default: Auto-switch high contrast colors based on theme
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                if (isDarkMode && currentSelectedColor === '#000000') {
+                    currentSelectedColor = '#ffffff';
+                } else if (!isDarkMode && currentSelectedColor === '#ffffff') {
+                    currentSelectedColor = '#000000';
+                }
+
                 colorPickerModal.classList.add('active');
-                // Reset selection if needed, or keep last
                 selectColor(currentSelectedColor);
             }
         }
@@ -792,22 +891,38 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.selectColor = (color) => {
+        // PURELY UI UPDATE - DOES NOT APPLY TO TEXT OR MAIN TOOLBAR INDICATOR
         currentSelectedColor = color;
         const preview = document.getElementById('chosen-color-preview');
         if (preview) preview.style.background = color;
+
+        // Sync Custom Input if it wasn't the source
+        const customInput = document.getElementById('custom-color-input');
+        if (customInput && customInput.value !== color && color.startsWith('#') && color.length === 7) {
+            customInput.value = color;
+        }
 
         // Highlight swatch if matches preset
         const swatches = document.querySelectorAll('.color-swatch');
         swatches.forEach(swatch => {
             swatch.classList.remove('selected');
-            // Simple check if inline style matches
-            if (swatch.style.background === color || swatch.style.backgroundColor === color) {
+            if (rgbToHex(swatch.style.background) === color || swatch.style.background === color || swatch.style.backgroundColor === color) {
                 swatch.classList.add('selected');
             }
         });
     };
 
+    // Helper for color comparison
+    function rgbToHex(rgb) {
+        if (!rgb) return '';
+        if (rgb.startsWith('#')) return rgb;
+        const result = rgb.match(/\d+/g);
+        if (!result) return '';
+        return "#" + ((1 << 24) + (parseInt(result[0]) << 16) + (parseInt(result[1]) << 8) + parseInt(result[2])).toString(16).slice(1);
+    }
+
     window.applySelectedColor = () => {
+        // ACTION - APPLIES TO TEXT
         restoreSelection(); // Restore selection before applying
 
         // Auto-expand selection if inside a table cell and collapsed (mimic Excel)
@@ -826,13 +941,45 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        window.formatText('foreColor', currentSelectedColor);
-        // Update the indicator strip
+        // Apply color and set sticky state
+        currentStickyColor = currentSelectedColor;
+
+        // Force CSS styling (spans instead of font tags) to override dark mode defaults better
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand('foreColor', false, currentSelectedColor);
+        document.execCommand('styleWithCSS', false, false);
+
+        // Update the indicator strip ONLY now that the color has been applied
         const indicator = document.getElementById('active-color-indicator');
         if (indicator) indicator.style.backgroundColor = currentSelectedColor;
 
         closeColorPicker();
     };
+
+    // --- Sticky Color Enforcement ---
+    const noteAreaElement = document.getElementById('note-area');
+    if (noteAreaElement) {
+        const enforceStickyColor = () => {
+            if (currentStickyColor) {
+                // Force apply the sticky color to the new caret position
+                document.execCommand('styleWithCSS', false, true);
+                document.execCommand('foreColor', false, currentStickyColor);
+                document.execCommand('styleWithCSS', false, false);
+            }
+        };
+
+        // Re-apply color when clicking new spots
+        noteAreaElement.addEventListener('click', () => {
+            setTimeout(enforceStickyColor, 10);
+        });
+
+        // Also on keyup (navigation keys)
+        noteAreaElement.addEventListener('keyup', (e) => {
+            if (e.key.startsWith('Arrow')) {
+                enforceStickyColor();
+            }
+        });
+    }
 
     // --- Real-time Search Logic ---
     const searchInput = document.getElementById('file-search');
@@ -1376,7 +1523,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Handling for Word Documents (.docx and .doc)
                 if (name.endsWith('.docx') || name.endsWith('.doc')) {
                     showModal("Generating document preview...");
+
                     const processWordBuffer = (arrayBuffer) => {
+                        // Check if it's actually an HTML file disguised as .doc (Our Export Format)
+                        try {
+                            const text = new TextDecoder().decode(arrayBuffer);
+                            if (text.trim().startsWith('<!DOCTYPE html>') || text.includes('<html')) {
+                                closeModal();
+                                showPreviewModal(fileRecord.name, text, false);
+                                return;
+                            }
+                        } catch (e) {
+                            // Not text/html, proceed to Mammoth
+                        }
+
                         mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
                             .then(result => {
                                 closeModal();
@@ -1384,7 +1544,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             })
                             .catch(err => {
                                 console.error(err);
-                                showModal("Error rendering document.");
+                                // Fallback for plain .doc files (binary) or resize errors
+                                try {
+                                    const text = new TextDecoder().decode(arrayBuffer);
+                                    if (text.includes('<html') || text.includes('<body')) {
+                                        closeModal();
+                                        showPreviewModal(fileRecord.name, text, false);
+                                        return;
+                                    }
+                                } catch (e) { }
+
+                                showModal("Error rendering document. (Note: Only .docx and HTML-based .doc files are supported)");
                             });
                     };
 
@@ -1990,35 +2160,48 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const { jsPDF } = window.jspdf;
-        // A4 size: 210mm x 297mm
-        const doc = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
+        // Apply Fix Class
+        document.body.classList.add('generating-pdf');
 
-        // Use .html() method specifically to capture layout/tables
-        // Requires html2canvas (added to store.html)
-        await doc.html(element, {
-            callback: function (doc) {
-                const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
-                doc.save(fileName);
+        // Small delay to ensure render updates
+        await new Promise(resolve => setTimeout(resolve, 50));
 
-                // Create Blob for Store
-                const pdfBlob = doc.output('blob');
-                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        try {
+            const { jsPDF } = window.jspdf;
+            // A4 size: 210mm x 297mm
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
 
-                document.dispatchEvent(new CustomEvent('save-note-file', {
-                    detail: { file: file, parentId: 'current' }
-                }));
+            // Use .html() method specifically to capture layout/tables
+            // Requires html2canvas (added to store.html)
+            await doc.html(element, {
+                callback: function (doc) {
+                    const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
+                    doc.save(fileName);
 
-                window.showModal('PDF Downloaded & Saved to Store!');
-            },
-            x: 10,
-            y: 10,
-            width: 190, // target width in the PDF document
-            windowWidth: 800, // window width in CSS pixels
-            autoPaging: 'text' // try to split text nicely
-        });
+                    // Create Blob for Store
+                    const pdfBlob = doc.output('blob');
+                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                    document.dispatchEvent(new CustomEvent('save-note-file', {
+                        detail: { file: file, parentId: 'current' }
+                    }));
+
+                    window.showModal('PDF Downloaded & Saved to Store!');
+                    document.body.classList.remove('generating-pdf'); // Cleanup
+                },
+                x: 10,
+                y: 10,
+                width: 190, // target width in the PDF document
+                windowWidth: 800, // window width in CSS pixels
+                autoPaging: 'text' // try to split text nicely
+            });
+        } catch (err) {
+            console.error("PDF Fail:", err);
+            document.body.classList.remove('generating-pdf'); // Cleanup on error
+            window.showModal("Error generating PDF.");
+        }
     };
 
 
@@ -2057,20 +2240,24 @@ document.addEventListener('DOMContentLoaded', () => {
             </html>
         `;
 
-        const blob = new Blob([htmlContent], { type: 'application/msword' });
+        const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
         const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.doc`;
 
-        const url = window.URL.createObjectURL(blob);
+        // Use URL.createObjectURL for cleaner handling
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
         a.href = url;
         a.download = fileName;
         a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
 
-        // Save to internal store
+        // Proper cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+
         const file = new File([blob], fileName, { type: 'application/msword' });
         document.dispatchEvent(new CustomEvent('save-note-file', {
             detail: { file: file, parentId: 'current' }

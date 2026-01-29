@@ -1,0 +1,36 @@
+/* PDF Export Fixes */
+body.generating-pdf .store-container {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+body.generating-pdf .content-section.active {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important; /* Remove flex constraint */
+}
+
+body.generating-pdf .rich-text-area {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+    width: 100% !important;
+    flex: none !important;
+    /* Ensure all content renders */
+}
+
+body.generating-pdf .excel-table th,
+body.generating-pdf .excel-table td.excel-row-header {
+    position: static !important;
+    /* Remove sticky for PDF */
+    background-color: #f8f9fa !important;
+    /* Ensure background persists */
+    border: 1px solid #000 !important;
+    /* meaningful border for print */
+}
+
+body.generating-pdf .excel-table {
+    border-collapse: collapse !important;
+    /* Better for PDF */
+    width: 100% !important;
+}

@@ -136,7 +136,8 @@ body {
     border-radius: 0;
     overflow: hidden;
     box-shadow: none;
-    min-height: 100vh;
+    height: 100vh;
+    /* Fixed height for viewport behavior */
     display: flex;
     flex-direction: column;
 }
@@ -241,22 +242,26 @@ body {
 
 .content-section.active {
     display: flex;
-    overflow-y: auto;
-    /* Ensure scrolling works properly */
-    max-height: calc(100vh - 150px);
-    /* Adjust based on header/tabs height to fit in view */
+    overflow: hidden;
+    /* Prevent outer scrolling */
+    flex: 1;
+    /* Automatically fill remaining space */
     position: relative;
+    padding-bottom: 0;
 }
 
 /* Make export bar sticky */
 .export-bar {
-    position: sticky;
-    bottom: 0;
+    /* Previously sticky, now we can just place it at bottom if it's flex, 
+       but if it is inside content-section, it might just sit at bottom naturally due to flex direction column.
+       Let's keep it simple. */
     background: #fff;
     padding: 10px;
     border-top: 1px solid #ddd;
     z-index: 100;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+    /* Don't shrink */
 }
 
 body.dark-mode .export-bar {
@@ -268,7 +273,8 @@ body.dark-mode .export-bar {
 /* Write Section */
 .rich-text-area {
     width: 100%;
-    flex-grow: 1;
+    flex: 1;
+    /* Take all remaining space */
     padding: 1rem;
     border: 1px solid #ccc;
     border-radius: 0 0 8px 8px;
@@ -277,10 +283,11 @@ body.dark-mode .export-bar {
     font-family: inherit;
     font-size: 1rem;
     overflow: auto;
-    /* Allow BOTH x and y scrolling */
+    /* Allow BOTH x and y scrolling internally */
     background: #fff;
     outline: none;
-    min-height: 300px;
+    min-height: 0;
+    /* Crucial: allow container to shrink below content size so headers stick and scrollbar appears */
 }
 
 .rich-text-area:focus {
@@ -300,7 +307,9 @@ body.dark-mode .export-bar {
 
 /* Excel-like Table Styles */
 .excel-table {
-    border-collapse: collapse;
+    border-collapse: separate;
+    /* Required for sticky to work properly with borders sometimes, though collapse is standard for excel. Let's try collapse first but sticky needs background. */
+    border-spacing: 0;
     width: max-content;
     /* Allow table to grow beyond container width */
     min-width: 100%;
@@ -319,8 +328,16 @@ body.dark-mode .export-bar {
     text-align: center;
     padding: 6px;
     user-select: none;
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     min-width: 40px;
+}
+
+/* Specific fix for the top-left corner cell to stay on top of both row and col headers */
+.excel-table th:first-child {
+    left: 0;
+    z-index: 20;
 }
 
 /* Column Resizer Handle */
@@ -332,7 +349,8 @@ body.dark-mode .export-bar {
     width: 5px;
     cursor: col-resize;
     user-select: none;
-    z-index: 20;
+    z-index: 21;
+    /* Above header */
     /* Invisible target area by default */
 }
 
@@ -352,6 +370,10 @@ body.dark-mode .export-bar {
     width: 40px;
     user-select: none;
     -webkit-user-select: none;
+    position: sticky;
+    left: 0;
+    z-index: 15;
+    /* Higher than normal cells, lower than top-left corner */
 }
 
 /* Cells */
@@ -369,7 +391,7 @@ body.dark-mode .export-bar {
 .excel-table td:not(.excel-row-header):focus {
     border: 2px solid #1a73e8;
     /* Sheets Blue */
-    z-index: 10;
+    z-index: 5;
     box-shadow: 0 0 0 1px rgba(26, 115, 232, 0.2);
 }
 
@@ -384,7 +406,7 @@ body.dark-mode .export-bar {
     right: -4px;
     border: 1px solid #fff;
     cursor: crosshair;
-    z-index: 11;
+    z-index: 6;
     pointer-events: none;
     /* purely visual for now */
 }
@@ -402,6 +424,43 @@ body.dark-mode .excel-table td:not(.excel-row-header) {
     border-color: #444;
     color: #fff;
 }
+
+/* Resizers */
+.resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 5;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.resizer:hover,
+.resizer.resizing {
+    background: var(--primary-orange);
+}
+
+.row-resizer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    cursor: row-resize;
+    z-index: 5;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.row-resizer:hover,
+.row-resizer.resizing {
+    background: var(--primary-orange);
+}
+
+
 
 /* Dark Mode Modals */
 body.dark-mode .modal-box {
@@ -451,10 +510,33 @@ body.dark-mode .modal-box h3 {
 }
 
 /* Color Grid Layout */
-.color-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+/* Color Grid & Swatches */
+.color-swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    padding: 0;
+}
+
+.color-swatch:hover {
+    transform: scale(1.15);
+    z-index: 2;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.color-swatch.selected::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    bottom: -4px;
+    left: -4px;
+    border: 2px solid var(--primary-orange);
+    border-radius: 50%;
 }
 
 
@@ -570,6 +652,25 @@ body.dark-mode .modal-box h3 {
     letter-spacing: 1px;
 }
 
+/* Color Picker Modal Text */
+.custom-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.custom-sublabel {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+body.dark-mode .custom-label {
+    color: #eee;
+}
+
+body.dark-mode .custom-sublabel {
+    color: #ccc;
+}
 
 .file-list {
     margin-top: 1rem;
@@ -2097,9 +2198,59 @@ body.dark-mode .form-group label {
 }
 
 /* --- Mobile Responsive Styles for Feedback/Support --- */
+/* Mobile Table Optimization */
+#note-area {
+    overflow: auto;
+    /* Allow both horizontal and vertical scroll */
+    -webkit-overflow-scrolling: touch;
+    max-width: 100vw;
+    max-height: 75vh;
+    /* Trigger vertical scroll for long tables */
+    padding-bottom: 20px;
+
+    /* Custom Scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
+}
+
+#note-area::-webkit-scrollbar {
+    height: 10px;
+    /* Horizontal bar height */
+    width: 10px;
+    /* Vertical bar width */
+}
+
+#note-area::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 5px;
+}
+
+#note-area::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 5px;
+    border: 2px solid #f5f5f5;
+}
+
+#note-area::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.excel-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+.excel-table th,
+.excel-table td {
+    border: 1px solid #bbb !important;
+    /* Stronger grid lines */
+    min-width: 70px;
+}
+
+/* --- Mobile Responsive Styles for Feedback/Support --- */
 @media (max-width: 600px) {
 
-    /* Header adjustments for feedback/support pages */
     .store-header .header-left {
         flex-wrap: wrap;
         gap: 8px !important;
@@ -2193,4 +2344,49 @@ body.dark-mode .form-group label {
         padding: 0.7rem 0.5rem !important;
         font-size: 0.85rem !important;
     }
+}
+
+/* PDF Export Fixes */
+body.generating-pdf .store-container {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+body.generating-pdf .content-section.active {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+}
+
+body.generating-pdf .rich-text-area {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+    width: 100% !important;
+    flex: none !important;
+}
+
+body.generating-pdf .excel-table th,
+body.generating-pdf .excel-table td.excel-row-header {
+    position: static !important;
+    background-color: #f8f9fa !important;
+    border: 1px solid #000 !important;
+}
+
+body.generating-pdf .excel-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+}
+
+body.generating-pdf .excel-table td {
+    border: 1px solid #000 !important;
+}
+
+body.generating-pdf .excel-table th {
+    background-color: #f0f0f0 !important;
+    color: #000 !important;
+}
+
+body.generating-pdf .excel-table {
+    margin-bottom: 20px !important;
 }
