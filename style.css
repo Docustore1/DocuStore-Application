@@ -544,34 +544,36 @@ body.dark-mode .modal-box h3 {
     transition: all 0.2s ease-in-out;
     background: #ffffff;
     border: 1px solid #ddd;
-    border-radius: 20px;
-    /* More rounded pill shape */
-    padding: 4px 8px;
+    border-radius: 25px;
+    /* Rounded pill shape */
+    padding: 2px;
     /* Compact padding */
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 10;
     display: flex;
-    justify-content: center;
+    justify-content: space-around;
+    /* Better distribution */
     align-items: center;
-    gap: 4px;
-    /* Tighter gap */
-    width: max-content;
-    max-width: 90%;
+    gap: 0;
+    /* Let space-around handle gaps */
+    width: 98%;
     /* Ensure it stays inside */
+    overflow: hidden;
+    /* Clip corners */
 }
 
 /* Adjust button internal padding for grid view only */
 .file-list.grid-view .btn-action {
-    padding: 4px;
-    /* Smaller touch target but fits */
-    font-size: 1rem;
-    /* Slightly smaller icon base */
+    padding: 2px 1px;
+    font-size: 1.15rem;
+    /* Match mobile size */
+    margin: 0;
 }
 
 .file-list.grid-view .btn-action svg {
-    width: 18px;
-    /* Slightly smaller SVG */
-    height: 18px;
+    /* Not needed if using emojis, but keeping for fallback safety */
+    width: 20px;
+    height: 20px;
 }
 
 .file-list.grid-view .file-item:hover .file-actions {
@@ -1153,26 +1155,33 @@ body.dark-mode .rich-text-toolbar {
         left: 50% !important;
         transform: translateX(-50%) !important;
         opacity: 1 !important;
-        width: 92% !important;
-        /* Slightly wider */
+        width: 98% !important;
+        /* Maximum width */
         background: #fff;
         border: 1px solid #ddd;
         border-radius: 25px;
-        /* Rounded pill shape */
-        padding: 8px !important;
-        /* increased padding */
+        padding: 2px !important;
         display: flex !important;
-        justify-content: center !important;
-        gap: 12px !important;
-        /* increased gap */
+        justify-content: space-around !important;
+        /* Better distribution away from edges */
+        gap: 0 !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         z-index: 20;
         pointer-events: auto !important;
+        overflow: hidden !important;
+    }
+
+    .file-list.grid-view .btn-action {
+        font-size: 1.15rem !important;
+        /* Balanced size */
+        padding: 2px 1px !important;
+        margin: 0 !important;
     }
 
     .file-list.grid-view .file-name {
         max-height: none !important;
         -webkit-line-clamp: 3 !important;
+        line-clamp: 3 !important;
         margin-bottom: 10px !important;
     }
 }
