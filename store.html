@@ -200,6 +200,34 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-box" style="width: 400px; text-align: left;">
+            <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Settings</h3>
+
+            <div class="setting-item"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <label>Dark Mode</label>
+                <input type="checkbox" id="setting-dark-mode-toggle" style="transform: scale(1.5);">
+            </div>
+
+            <div class="setting-item"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <label>Default Font Size</label>
+                <select id="setting-font-size" style="padding: 5px;">
+                    <option value="1">Small</option>
+                    <option value="3" selected>Normal</option>
+                    <option value="5">Large</option>
+                </select>
+            </div>
+
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="btn secondary"
+                    onclick="document.getElementById('settings-modal').classList.remove('active')">Close</button>
+            </div>
+        </div>
+    </div>
+
 
 
     <!-- Document Preview Modal -->

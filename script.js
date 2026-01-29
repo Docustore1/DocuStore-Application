@@ -600,12 +600,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnThemeToggle) btnThemeToggle.textContent = '☀️';
     }
 
+    // --- Settings Modal Logic ---
+    const btnSettings = document.getElementById('btn-settings');
+    const settingsModal = document.getElementById('settings-modal');
+    const settingDarkMode = document.getElementById('setting-dark-mode-toggle');
+
+    if (btnSettings && settingsModal) {
+        btnSettings.addEventListener('click', () => {
+            // Sync state before opening
+            if (settingDarkMode) settingDarkMode.checked = body.classList.contains('dark-mode');
+            settingsModal.classList.add('active');
+        });
+    }
+
+    if (settingDarkMode) {
+        settingDarkMode.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                body.classList.add('dark-mode');
+                if (btnThemeToggle) btnThemeToggle.textContent = '☀️';
+                localStorage.setItem('docStore_theme', 'dark');
+            } else {
+                body.classList.remove('dark-mode');
+                if (btnThemeToggle) btnThemeToggle.textContent = '🌙';
+                localStorage.setItem('docStore_theme', 'light');
+            }
+        });
+    }
     if (btnThemeToggle) {
         btnThemeToggle.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
             const isDark = body.classList.contains('dark-mode');
             localStorage.setItem('docStore_theme', isDark ? 'dark' : 'light');
             btnThemeToggle.textContent = isDark ? '☀️' : '🌙';
+
+            // Sync with settings modal if it exists
+            if (settingDarkMode) settingDarkMode.checked = isDark;
         });
     }
 

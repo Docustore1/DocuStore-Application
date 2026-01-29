@@ -498,7 +498,8 @@ body.dark-mode .modal-box h3 {
 .drop-zone {
     border: 2px dashed var(--primary-orange);
     border-radius: 8px;
-    padding: 3rem;
+    padding: 2rem;
+    /* Matches inline style, ensures consistency */
     text-align: center;
     background-color: #fffaf0;
     margin-bottom: 2rem;
@@ -507,7 +508,11 @@ body.dark-mode .modal-box h3 {
     font-size: 1.1rem;
     color: #555;
     position: relative;
-    overflow: hidden;
+    /* overflow: hidden; Removed to prevent clipping */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .drop-zone:hover {
