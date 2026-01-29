@@ -308,7 +308,11 @@
         <div class="preview-container">
             <header class="preview-header">
                 <span id="preview-filename">Document Preview</span>
-                <button onclick="closePreview()" class="btn-close-preview">✕</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <a id="preview-download-btn" class="btn-action" title="Download"
+                        style="display: none; text-decoration: none; color: white; background: rgba(255,255,255,0.1); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.9rem;">⬇️</a>
+                    <button onclick="closePreview()" class="btn-close-preview">✕</button>
+                </div>
             </header>
             <div id="preview-content" class="preview-body">
                 <div class="preview-loading">Loading...</div>

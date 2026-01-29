@@ -1572,9 +1572,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     } else {
                         fetch(fileUrl)
-                            .then(response => response.arrayBuffer())
+                            .then(response => {
+                                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                                return response.arrayBuffer();
+                            })
                             .then(processWordBuffer)
-                            .catch(err => showModal("Error loading file."));
+                            .catch(err => {
+                                console.error("Word Fetch Error:", err);
+                                showModal("Error loading file. This may be due to CORS security policies or network issues.");
+                            });
                     }
                     return;
                 }
@@ -1630,13 +1636,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Use fetch for both data URIs and URLs - it's cleaner and more robust
                     fetch(fileUrl)
                         .then(response => {
-                            if (!response.ok) throw new Error("Could not fetch file content.");
+                            if (!response.ok) throw new Error(`HTTP ${response.status}`);
                             return response.arrayBuffer();
                         })
                         .then(processExcelBuffer)
                         .catch(err => {
-                            console.error("Fetch Error:", err);
-                            showModal("Error loading file: " + err.message);
+                            console.error("Excel Fetch Error:", err);
+                            showModal("Error loading file: " + err.message + ". (Check CORS configuration if this is a cloud file)");
                         });
                     return;
                 }
@@ -1646,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showModal("Loading preview...");
                 fetch(fileUrl)
                     .then(response => {
-                        if (!response.ok) throw new Error("Could not fetch file content.");
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
                         return response.text();
                     })
                     .then(text => {
@@ -1665,9 +1671,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     })
                     .catch(err => {
-                        console.error("Preview Error:", err);
+                        console.error("Preview Fetch Error:", err);
                         closeModal();
                         // If can't preview, fall back to download
+                        window.showModal("Access Blocked: Your browser prevented loading this file's content due to CORS policy. Please configure Firebase CORS.");
+
                         const a = document.createElement('a');
                         a.href = fileUrl;
                         a.download = fileRecord.name;
@@ -1762,17 +1770,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listen for Note Save Event
     document.addEventListener('save-note-file', async (e) => {
         // Handle both old (direct file) and new (object with parentId) formats
-        let file, targetId;
+        let noteFile, targetId;
         if (e.detail.file) {
-            file = e.detail.file;
+            noteFile = e.detail.file;
             targetId = e.detail.parentId;
         } else {
-            file = e.detail;
+            noteFile = e.detail;
             targetId = 'current';
         }
 
         // Wait for usage to finish (shows "Uploading..." -> "Success")
-        await saveFileToDB(file, targetId);
+        await saveFileToDB(noteFile, targetId);
 
         // Optional: Switch to Store tab to see it
         const storeTabBtn = document.querySelector('[data-tab="store"]');
@@ -2182,10 +2190,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Create Blob for Store
                     const pdfBlob = doc.output('blob');
-                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                    const noteFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
                     document.dispatchEvent(new CustomEvent('save-note-file', {
-                        detail: { file: file, parentId: 'current' }
+                        detail: { file: noteFile, parentId: 'current' }
                     }));
 
                     window.showModal('PDF Downloaded & Saved to Store!');
@@ -2258,9 +2266,9 @@ document.addEventListener('DOMContentLoaded', () => {
             window.URL.revokeObjectURL(url);
         }, 100);
 
-        const file = new File([blob], fileName, { type: 'application/msword' });
+        const noteFile = new File([blob], fileName, { type: 'application/msword' });
         document.dispatchEvent(new CustomEvent('save-note-file', {
-            detail: { file: file, parentId: 'current' }
+            detail: { file: noteFile, parentId: 'current' }
         }));
 
         window.showModal('Word Doc Downloaded & Saved to Store!');
@@ -2312,9 +2320,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        const file = new File([blob], fileName, { type: 'application/vnd.ms-excel' });
+        const noteFile = new File([blob], fileName, { type: 'application/vnd.ms-excel' });
         document.dispatchEvent(new CustomEvent('save-note-file', {
-            detail: { file: file, parentId: 'current' }
+            detail: { file: noteFile, parentId: 'current' }
         }));
 
         window.showModal('Excel File Downloaded & Saved to Store!');
@@ -2354,14 +2362,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    let currentPreviewUrl = '';
+
     function showPreviewModal(filename, content, isUrl = false) {
         const previewModal = document.getElementById('preview-modal');
         const previewContent = document.getElementById('preview-content');
         const previewFilename = document.getElementById('preview-filename');
+        const downloadBtn = document.getElementById('preview-download-btn');
 
         if (previewModal && previewContent && previewFilename) {
             previewFilename.textContent = filename;
-            if (isUrl) {
+            currentPreviewUrl = isUrl ? content : '';
+
+            // Set download button visibility and URL
+            if (downloadBtn) {
+                if (isUrl) {
+                    downloadBtn.href = content;
+                    downloadBtn.style.display = 'inline-flex';
+                    downloadBtn.download = filename;
+                } else {
+                    downloadBtn.style.display = 'none';
+                }
+            }
+
+            const lowerName = filename.toLowerCase();
+            const isImage = lowerName.endsWith('.png') || lowerName.endsWith('.jpg') ||
+                lowerName.endsWith('.jpeg') || lowerName.endsWith('.gif') ||
+                lowerName.endsWith('.webp') || lowerName.endsWith('.svg');
+
+            if (isUrl && isImage) {
+                // Handle images natively to avoid some CORS/Iframe issues
+                previewContent.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; overflow:auto;">
+                    <img src="${content}" style="max-width:100%; max-height:100%; object-fit:contain; background:#f0f0f0; border-radius:4px; box-shadow:0 5px 15px rgba(0,0,0,0.1);">
+                </div>`;
+                previewContent.classList.remove('frame-mode');
+            } else if (isUrl) {
                 previewContent.innerHTML = `<iframe src="${content}" style="width:100%; height:100%; border:none; background:white;"></iframe>`;
                 previewContent.classList.add('frame-mode');
             } else {
