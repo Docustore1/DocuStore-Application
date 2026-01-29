@@ -101,8 +101,14 @@
                 <div style="width: 1px; height: 20px; background: #ccc; margin: 0 10px;"></div>
                 <button class="btn-toolbar" onclick="insertTable(this)" title="Insert Table">Table</button>
                 <div style="width: 1px; height: 20px; background: #ccc; margin: 0 10px;"></div>
-                <button class="btn-toolbar" onclick="openColorPicker(this)" title="Text Color"
-                    style="font-size: 1.2rem;">🎨</button>
+                <button id="btn-color-picker" class="btn-toolbar" onclick="openColorPicker(this)" title="Text Color"
+                    style="position: relative; padding: 5px; flex-direction: column; justify-content: center;">
+                    <span style="font-size: 1.4rem; line-height: 1; pointer-events: none;">🎨</span>
+                    <!-- Active Color Indicator -->
+                    <div id="active-color-indicator"
+                        style="width: 80%; height: 4px; background-color: #000; margin-top: 2px; border-radius: 2px; pointer-events: none;">
+                    </div>
+                </button>
 
                 <span id="save-msg" class="save-status" style="margin-left: auto; font-size: 0.8rem;">Saved...</span>
             </div>
@@ -204,10 +210,12 @@
             </div>
 
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <label style="cursor: pointer; color: #1a73e8; font-weight: 500;">
+                <label style="cursor: pointer; color: #1a73e8; font-weight: 500; display: flex; align-items: center;">
                     Custom
-                    <input type="color" id="custom-color-input" style="opacity: 0; width: 0; height: 0;"
-                        onchange="selectColor(this.value)">
+                    <!-- Input covers the text for touch targets -->
+                    <input type="color" id="custom-color-input"
+                        style="opacity: 0; width: 1px; height: 1px; margin-left: 5px;"
+                        oninput="selectColor(this.value)">
                 </label>
 
                 <div style="display: flex; align-items: center; gap: 10px;">

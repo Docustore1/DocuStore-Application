@@ -642,11 +642,34 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSelectedColor = '#000000'; // Default
     const colorPickerModal = document.getElementById('color-picker-modal');
 
+    let savedSelection = null;
+
+    function saveSelection() {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+            savedSelection = sel.getRangeAt(0);
+        }
+    }
+
+    function restoreSelection() {
+        if (savedSelection) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedSelection);
+        }
+    }
+
     window.openColorPicker = () => {
         if (colorPickerModal) {
-            colorPickerModal.classList.add('active');
-            // Reset selection if needed, or keep last
-            selectColor(currentSelectedColor);
+            // Toggle Logic
+            if (colorPickerModal.classList.contains('active')) {
+                colorPickerModal.classList.remove('active');
+            } else {
+                saveSelection(); // Save where the user was typing/selecting
+                colorPickerModal.classList.add('active');
+                // Reset selection if needed, or keep last
+                selectColor(currentSelectedColor);
+            }
         }
     };
 
@@ -656,7 +679,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.selectColor = (color) => {
         currentSelectedColor = color;
-        document.getElementById('chosen-color-preview').style.background = color;
+        const preview = document.getElementById('chosen-color-preview');
+        if (preview) preview.style.background = color;
 
         // Highlight swatch if matches preset
         const swatches = document.querySelectorAll('.color-swatch');
@@ -667,13 +691,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 swatch.classList.add('selected');
             }
         });
-
-        // If custom input triggered this, ensure preview updates
-        // (Handled by the preview div background update above)
     };
 
     window.applySelectedColor = () => {
+        restoreSelection(); // Restore selection before applying
+
+        // Auto-expand selection if inside a table cell and collapsed (mimic Excel)
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0 && sel.isCollapsed) {
+            let node = sel.anchorNode;
+            // Climb up to find TD
+            while (node && node.nodeName !== 'TD' && node.id !== 'note-area') {
+                node = node.parentNode;
+            }
+            if (node && node.nodeName === 'TD') {
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+
         window.formatText('foreColor', currentSelectedColor);
+        // Update the indicator strip
+        const indicator = document.getElementById('active-color-indicator');
+        if (indicator) indicator.style.backgroundColor = currentSelectedColor;
+
         closeColorPicker();
     };
 
