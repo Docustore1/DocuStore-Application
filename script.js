@@ -328,6 +328,23 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => btn.classList.remove('active'), 200);
         }
 
+        // Logic to find the last row number to ensure continuity
+        let startRow = 1;
+        const noteArea = document.getElementById('note-area');
+        if (noteArea) {
+            const existingHeaders = noteArea.querySelectorAll('.excel-row-header');
+            if (existingHeaders.length > 0) {
+                let maxNum = 0;
+                existingHeaders.forEach(th => {
+                    const num = parseInt(th.innerText);
+                    if (!isNaN(num) && num > maxNum) {
+                        maxNum = num;
+                    }
+                });
+                startRow = maxNum + 1;
+            }
+        }
+
         // Default "Full Table Format" (Large Sheet)
         // User requested "countless", so we provide a very large instance
         const rows = 200;
@@ -347,7 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < rows; i++) {
             tableHTML += `<tr>`;
             // Row Number Header
-            tableHTML += `<td class="excel-row-header" contenteditable="false">${i + 1}</td>`;
+            // Use startRow + i for dynamic numbering
+            tableHTML += `<td class="excel-row-header" contenteditable="false">${startRow + i}</td>`;
             // Empty Format Cells
             for (let j = 0; j < cols; j++) {
                 tableHTML += `<td></td>`;
