@@ -127,6 +127,21 @@ body {
     transform: translateY(0);
 }
 
+.btn-pill {
+    border-radius: 50px !important;
+    padding: 8px 18px !important;
+    font-size: 0.85rem !important;
+    display: inline-flex !important;
+    align-items: center;
+    border: 1px solid #ddd !important;
+}
+
+body.dark-mode .btn-pill {
+    background-color: #333 !important;
+    color: #fff !important;
+    border-color: #555 !important;
+}
+
 /* Store Page Styles */
 .store-container {
     background: rgba(255, 255, 255, 1);
@@ -559,11 +574,10 @@ body.dark-mode .modal-box h3 {
 }
 
 .btn-folder-yellow {
-    background: #fff8e1;
-    border-color: #ffd700;
-    color: #333;
-    font-size: 0.85rem;
-    padding: 8px 15px;
+    background: #FFD700 !important;
+    border-color: #DAA520 !important;
+    color: #000 !important;
+    font-weight: 700 !important;
 }
 
 .btn-toolbar:hover,
@@ -1751,6 +1765,36 @@ body.dark-mode .folder-icon-svg {
         width: 100%;
         margin: 0;
         border-radius: 0;
+        height: auto !important;
+        min-height: 100vh;
+        overflow: visible !important;
+    }
+
+    .content-section.active {
+        overflow: visible !important;
+        flex: none !important;
+        height: auto !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Reorder for Mobile: Header(0) -> Toolbar(1) -> ExportBar(2) -> NoteArea(3) */
+    .content-section.active>div:first-child {
+        order: 0;
+    }
+
+    .rich-text-toolbar {
+        order: 1;
+    }
+
+    .export-bar {
+        order: 2;
+        margin-top: 10px !important;
+        margin-bottom: 15px !important;
+    }
+
+    #note-area {
+        order: 3;
     }
 
     .store-header {
@@ -1915,7 +1959,8 @@ body.dark-mode .folder-icon-svg {
 
 
     .rich-text-area {
-        height: 250px !important;
+        height: auto !important;
+        min-height: 300px;
     }
 
     .btn {
@@ -2118,35 +2163,32 @@ body.dark-mode .empty-state p {
 
 /* --- Custom Scrollbar Styles --- */
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    border: 3px solid transparent;
+    background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+    background-color: var(--primary-orange);
 }
 
 /* Dark Mode Scrollbars */
-body.dark-mode ::-webkit-scrollbar-track {
-    background: #1e1e1e;
-}
-
 body.dark-mode ::-webkit-scrollbar-thumb {
-    background: #444;
-    border: 1px solid #333;
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 body.dark-mode ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-orange);
+    background-color: var(--primary-yellow);
 }
 
 /* --- Dark Mode Table Fixes --- */
@@ -2204,8 +2246,9 @@ body.dark-mode .form-group label {
     /* Allow both horizontal and vertical scroll */
     -webkit-overflow-scrolling: touch;
     max-width: 100vw;
-    max-height: 75vh;
-    /* Trigger vertical scroll for long tables */
+    /* On mobile, we let the page scroll vertically, so removing max-height here
+       prevents triple scrollbars (Page + Section + NoteArea) */
+    max-height: none;
     padding-bottom: 20px;
 
     /* Custom Scrollbar */
@@ -2214,25 +2257,27 @@ body.dark-mode .form-group label {
 }
 
 #note-area::-webkit-scrollbar {
-    height: 10px;
-    /* Horizontal bar height */
-    width: 10px;
-    /* Vertical bar width */
+    height: 8px;
+    width: 8px;
 }
 
 #note-area::-webkit-scrollbar-track {
-    background: #f5f5f5;
-    border-radius: 5px;
+    background: transparent;
 }
 
 #note-area::-webkit-scrollbar-thumb {
-    background: #999;
-    border-radius: 5px;
-    border: 2px solid #f5f5f5;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+body.dark-mode #note-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 #note-area::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--primary-orange);
 }
 
 .excel-table {
