@@ -557,65 +557,116 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => btn.classList.remove('active'), 200);
         }
 
-        // Logic to find the last row number to ensure continuity
-        let startRow = 1;
+        const modal = document.getElementById('table-insert-modal');
+        if (!modal) return;
+
+        let savedRange = null;
         const noteArea = document.getElementById('note-area');
         if (noteArea) {
-            const existingHeaders = noteArea.querySelectorAll('.excel-row-header');
-            if (existingHeaders.length > 0) {
-                let maxNum = 0;
-                existingHeaders.forEach(th => {
-                    const num = parseInt(th.innerText);
-                    if (!isNaN(num) && num > maxNum) {
-                        maxNum = num;
-                    }
-                });
-                startRow = maxNum + 1;
+            noteArea.focus();
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                savedRange = selection.getRangeAt(0);
             }
         }
 
-        const rows = 100; // Start with 100
-        const cols = MAX_COLS; // 26 Columns (A-Z)
+        modal.classList.add('active');
 
-        // Generate Excel Table HTML
-        let tableHTML = `<table class="excel-table">`;
+        // Reset inputs
+        document.getElementById('table-rows-input').value = '10';
+        document.getElementById('table-cols-input').value = '5';
+        document.getElementById('table-header-input').checked = false;
 
-        // Header Row (A, B, C...)
-        tableHTML += `<thead><tr><th style="background:#e8e8e8;"></th>`; // Top-left corner
-        for (let k = 0; k < cols; k++) {
-            tableHTML += `<th contenteditable="false" style="position: relative;">${getColumnLabel(k)}<div class="resizer" contenteditable="false"></div></th>`;
-        }
-        tableHTML += `</tr></thead><tbody>`;
+        const confirmBtn = document.getElementById('btn-confirm-table-insert');
+        // Remove previous listeners
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
-        // Data Rows with Indices (1, 2, 3...)
-        for (let i = 0; i < rows; i++) {
-            tableHTML += `<tr>`;
-            tableHTML += `<td class="excel-row-header" contenteditable="false" style="position: relative;">${startRow + i}<div class="row-resizer" contenteditable="false"></div></td>`;
-            for (let j = 0; j < cols; j++) {
-                tableHTML += `<td></td>`;
+        newConfirmBtn.addEventListener('click', () => {
+            let rows = parseInt(document.getElementById('table-rows-input').value) || 10;
+            if (rows < 1) rows = 1;
+
+            let cols = parseInt(document.getElementById('table-cols-input').value) || 5;
+            if (cols < 1) cols = 1;
+            if (cols > 50) cols = 50;
+
+            let needHeader = document.getElementById('table-header-input').checked;
+
+            modal.classList.remove('active');
+
+            // Restore selection
+            if (noteArea && savedRange) {
+                noteArea.focus();
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(savedRange);
+            } else if (noteArea) {
+                noteArea.focus();
             }
-            tableHTML += `</tr>`;
-        }
 
-        tableHTML += `</tbody></table><p><br/></p>`;
-
-        document.getElementById('note-area').focus();
-        document.execCommand('insertHTML', false, tableHTML);
-
-        // IMPORTANT: After insertion, find the table and attach observer and resizers
-        // We need a short delay because execCommand is async-like in DOM updates sometimes
-        setTimeout(() => {
-            const tables = document.querySelectorAll('.excel-table');
-            if (tables.length > 0) {
-                // Attach to the last inserted table (likely the last one in DOM)
-                const newTable = tables[tables.length - 1];
-                attachTableObserver(newTable);
-                enableResizers(newTable);
+            // Logic to find the last row number for continuity
+            let startRow = 1;
+            if (noteArea) {
+                const existingHeaders = noteArea.querySelectorAll('.excel-row-header');
+                if (existingHeaders.length > 0) {
+                    let maxNum = 0;
+                    existingHeaders.forEach(th => {
+                        const num = parseInt(th.innerText);
+                        if (!isNaN(num) && num > maxNum) {
+                            maxNum = num;
+                        }
+                    });
+                    startRow = maxNum + 1;
+                }
             }
-        }, 100);
 
-        // Dispatch input event to ensure autosave catches the new table
-        document.getElementById('note-area').dispatchEvent(new Event('input'));
+            // Generate Excel Table HTML
+            let tableHTML = `<table class="excel-table">`;
+
+            // Top Header Row
+            tableHTML += `<thead><tr><th style="background:#e8e8e8;"></th>`;
+            for (let k = 0; k < cols; k++) {
+                tableHTML += `<th contenteditable="false" style="position: relative;">${getColumnLabel(k)}<div class="resizer" contenteditable="false"></div></th>`;
+            }
+            tableHTML += `</tr></thead><tbody>`;
+
+            // Optional Editable Header Row
+            if (needHeader) {
+                tableHTML += `<tr>`;
+                tableHTML += `<td class="excel-row-header" contenteditable="false" style="position: relative;">${startRow}<div class="row-resizer" contenteditable="false"></div></td>`;
+                for (let j = 0; j < cols; j++) {
+                    tableHTML += `<th style="background:#f4f4f4; border-bottom: 2px solid #ddd; padding: 5px;">Header</th>`;
+                }
+                tableHTML += `</tr>`;
+                startRow++;
+                if (rows > 0) rows--;
+            }
+
+            // Data Rows
+            for (let i = 0; i < rows; i++) {
+                tableHTML += `<tr>`;
+                tableHTML += `<td class="excel-row-header" contenteditable="false" style="position: relative;">${startRow + i}<div class="row-resizer" contenteditable="false"></div></td>`;
+                for (let j = 0; j < cols; j++) {
+                    tableHTML += `<td></td>`;
+                }
+                tableHTML += `</tr>`;
+            }
+
+            tableHTML += `</tbody></table><p><br/></p>`;
+
+            document.execCommand('insertHTML', false, tableHTML);
+
+            setTimeout(() => {
+                const tables = document.querySelectorAll('.excel-table');
+                if (tables.length > 0) {
+                    const newTable = tables[tables.length - 1];
+                    // attachTableObserver(newTable); // Removed to stop auto-expanding rows
+                    enableResizers(newTable);
+                }
+            }, 100);
+
+            if (noteArea) noteArea.dispatchEvent(new Event('input'));
+        });
     };
 
     // --- Column Resizing Logic (Global Delegation) ---
@@ -1107,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    function showSelect(message, options, onConfirm) {
+    function showSelect(message, options, onConfirm, btnText = 'Move') {
         const modal = document.getElementById('custom-modal');
         const msg = document.getElementById('modal-message');
         const actions = document.getElementById('modal-actions');
@@ -1133,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const btnOk = document.createElement('button');
             btnOk.className = 'btn primary';
-            btnOk.textContent = 'Move';
+            btnOk.textContent = btnText;
             btnOk.onclick = () => {
                 onConfirm(select.value);
                 closeModal();
@@ -1150,6 +1201,141 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.style.display = 'flex';
             setTimeout(() => select.focus(), 50);
         }
+    }
+
+    window.triggerDownload = function () {
+        const options = [
+            { value: 'pdf', text: 'PDF Document (.pdf)' },
+            { value: 'word', text: 'Word Document (.doc)' },
+            { value: 'excel', text: 'Excel Document (.xls)' }
+        ];
+        showSelect("Select download format:", options, (format) => {
+            if (format === 'pdf') {
+                performDownloadPDF();
+            } else if (format === 'word') {
+                performDownloadWord();
+            } else if (format === 'excel') {
+                performDownloadExcel();
+            }
+        }, 'Download');
+    };
+
+    async function performDownloadPDF() {
+        const element = document.getElementById('note-area');
+        if (!element.innerText.trim() && !element.innerHTML.includes('<img')) {
+            window.showModal('Note is empty.');
+            return;
+        }
+
+        document.body.classList.add('generating-pdf');
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            await doc.html(element, {
+                callback: function (doc) {
+                    const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
+                    doc.save(fileName);
+                    window.showModal('PDF Downloaded!');
+                    document.body.classList.remove('generating-pdf');
+                },
+                x: 10,
+                y: 10,
+                width: 190,
+                windowWidth: 800,
+                autoPaging: 'text'
+            });
+        } catch (err) {
+            console.error("PDF Fail:", err);
+            document.body.classList.remove('generating-pdf');
+            window.showModal("Error generating PDF.");
+        }
+    }
+
+    function performDownloadWord() {
+        const noteContent = document.getElementById('note-area').innerHTML;
+        if (!document.getElementById('note-area').innerText.trim()) {
+            window.showModal('Note is empty.');
+            return;
+        }
+
+        const css = `
+            <style>
+                body { font-family: 'Calibri', sans-serif; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+                td, th { border: 1px solid #000; padding: 8px; vertical-align: top; }
+                .excel-table { width: 100%; margin: 10px 0; border: 1px solid #000; }
+                .excel-row-header { background: #f0f0f0; font-weight: bold; }
+                img { max-width: 100%; height: auto; }
+            </style>
+        `;
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset="utf-8">
+                <title>Export</title>
+                ${css}
+            </head>
+            <body>
+                ${noteContent}
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.doc`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style = "display: none";
+        a.href = url;
+        a.download = fileName;
+        a.click();
+
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+
+        window.showModal('Word Doc Downloaded!');
+    }
+
+    function performDownloadExcel() {
+        const noteContent = document.getElementById('note-area').innerHTML;
+        if (!document.getElementById('note-area').innerText.trim()) {
+            window.showModal('Note is empty.');
+            return;
+        }
+
+        const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body>
+            ${noteContent}
+        </body>
+        </html>
+    `;
+
+        const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.xls`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        window.showModal('Excel File Downloaded!');
     }
 
     window.closeModal = function () {
@@ -2186,7 +2372,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await doc.html(element, {
                 callback: function (doc) {
                     const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
-                    doc.save(fileName);
 
                     // Create Blob for Store
                     const pdfBlob = doc.output('blob');
@@ -2196,7 +2381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         detail: { file: noteFile, parentId: 'current' }
                     }));
 
-                    window.showModal('PDF Downloaded & Saved to Store!');
+                    window.showModal('PDF Saved to Store!');
                     document.body.classList.remove('generating-pdf'); // Cleanup
                 },
                 x: 10,
@@ -2251,27 +2436,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
         const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.doc`;
 
-        // Use URL.createObjectURL for cleaner handling
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        document.body.appendChild(a);
-        a.style = "display: none";
-        a.href = url;
-        a.download = fileName;
-        a.click();
-
-        // Proper cleanup
-        setTimeout(() => {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-        }, 100);
-
         const noteFile = new File([blob], fileName, { type: 'application/msword' });
         document.dispatchEvent(new CustomEvent('save-note-file', {
             detail: { file: noteFile, parentId: 'current' }
         }));
 
-        window.showModal('Word Doc Downloaded & Saved to Store!');
+        window.showModal('Word Doc Saved to Store!');
     };
 
 
@@ -2309,23 +2479,14 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
         const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel' });
-        const url = URL.createObjectURL(blob);
         const fileName = `Note_${new Date().toLocaleDateString().replace(/\//g, '-')}.xls`;
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
 
         const noteFile = new File([blob], fileName, { type: 'application/vnd.ms-excel' });
         document.dispatchEvent(new CustomEvent('save-note-file', {
             detail: { file: noteFile, parentId: 'current' }
         }));
 
-        window.showModal('Excel File Downloaded & Saved to Store!');
+        window.showModal('Excel File Saved to Store!');
     };
 
 
